@@ -140,7 +140,9 @@ export default {
       } catch (e) {
         return json({ ok: false, error: "요청을 읽지 못했습니다." }, 400, origin);
       }
-      if (!timingSafeEqual(String(body.password || ""), env.BOARD_PASSWORD)) {
+      /* 저장된 값의 앞뒤 공백은 떼고 본다. 복사해 붙여넣을 때 줄바꿈이나
+         공백이 딸려 들어가는 일이 잦은데, 눈에 보이지 않아 원인을 찾기 어렵다. */
+      if (!timingSafeEqual(String(body.password || ""), String(env.BOARD_PASSWORD).trim())) {
         /* 맞히기를 늦추기 위해 잠깐 지연시킨다. */
         await new Promise((r) => setTimeout(r, 700));
         return json({ ok: false, error: "비밀번호가 맞지 않습니다." }, 401, origin);
