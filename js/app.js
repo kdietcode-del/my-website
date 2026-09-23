@@ -27,6 +27,7 @@ const App = (() => {
   /* 지금 진행 중인 일이 먼저 오고, 아직 시작 안 한 아이디어가 마지막에 온다. */
   const TABS = [
     { key: "pipeline", label: "제품 런칭 상황보드", view: () => Pipeline },
+    { key: "concept", label: "제품 컨셉보드", view: () => Concept },
     { key: "competitors", label: "경쟁제품 참고보드", view: () => Competitors },
     { key: "ideas", label: "차기 신제품 아이디어", view: () => Ideas },
   ];
@@ -38,6 +39,7 @@ const App = (() => {
   function go(tabKey, payload) {
     activeTab = tabKey;
     if (tabKey === "pipeline") Pipeline.setActive(payload || null);
+    if (tabKey === "concept") Concept.setActive(payload || null);
     if (tabKey === "competitors" && payload) Competitors.focusProduct(payload);
     render();
   }

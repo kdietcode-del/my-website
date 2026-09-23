@@ -21,6 +21,35 @@ const EFFICACIES = [
   { key: "trouble", label: "트러블" },
 ];
 
+/* ---------- 제품 컨셉보드 ---------- */
+
+/* 글꼴 — 따로 내려받지 않고 기기에 이미 있는 것만 쓴다.
+   인터넷이 끊겨도, 파일을 그냥 열어도 그대로 보인다. */
+const CONCEPT_FONTS = [
+  { key: "sans", label: "고딕", css: 'system-ui, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif' },
+  { key: "serif", label: "명조", css: '"Nanum Myeongjo", "Apple Myungjo", Batang, serif' },
+  { key: "round", label: "둥근고딕", css: '"Gowun Dodum", "Nanum Gothic", "Apple SD Gothic Neo", sans-serif' },
+  { key: "mono", label: "모노", css: 'ui-monospace, Consolas, "D2Coding", monospace' },
+];
+
+const CONCEPT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 56];
+
+/* 상표 · 비포애프터 같은 가부 판단 */
+const CHECK_STATES = [
+  { key: "", label: "확인 전" },
+  { key: "yes", label: "가능" },
+  { key: "checking", label: "확인 중" },
+  { key: "no", label: "불가" },
+];
+
+/* 컨셉보드에 놓이는 칸들. 순서가 곧 화면 순서다. */
+const CONCEPT_BLOCKS = [
+  { key: "oneLiner", title: "한 줄 제품 컨셉", hint: "이 제품을 한 문장으로" },
+  { key: "efficacy", title: "제품 효능 및 카테고리", hint: "어떤 고민을, 어떤 제형으로" },
+  { key: "usp", title: "USP · 차별점", hint: "경쟁 제품 대신 이걸 골라야 하는 이유" },
+  { key: "target", title: "타겟과 페인포인트", hint: "누가, 무엇 때문에 불편한가" },
+];
+
 /* 아이디어가 지금 어디까지 왔는지 */
 const STATUSES = [
   { key: "", label: "미정" },

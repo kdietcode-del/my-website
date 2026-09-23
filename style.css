@@ -989,6 +989,183 @@ a { color: var(--accent); }
 .images__add { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .images__add .input { min-width: 180px; flex: 1 1 180px; }
 
+/* ---------- 제품 컨셉보드 ---------- */
+
+.view__head--tight { margin-bottom: 10px; }
+
+/* 서식 막대 — 화면 위에 붙어 따라다닌다 */
+.ctools {
+  position: sticky;
+  top: 92px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.ctools__label { font-size: 0.8125rem; color: var(--muted); margin-right: auto; }
+.ctools .select { padding: 5px 8px; }
+
+/* 한 장짜리 보드 */
+.cboard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+}
+
+.cboard__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 340px);
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 22px;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 22px;
+}
+.cboard__eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.cboard__name { font-size: 2rem; margin: 4px 0 10px; }
+
+.cboard__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.cpanel {
+  border: 1px solid var(--grid);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.cpanel--wide { grid-column: span 2; }
+.cpanel--full { grid-column: 1 / -1; }
+
+.cpanel__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.cpanel__hint {
+  font-size: 0.6875rem;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+.cpanel__body { display: flex; flex-direction: column; gap: 6px; }
+
+/* 눌러서 바로 고치는 글 */
+.ctext {
+  min-height: 1.6em;
+  line-height: 1.6;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ctext:hover { background: var(--surface-2); }
+.ctext:focus { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--accent); }
+.ctext:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+.ctext--lead { font-size: 1.0625rem; color: var(--text-2); }
+.ctext--small { font-size: 0.875rem; color: var(--text-2); }
+
+/* 키워드 줄 */
+.krows { display: flex; flex-direction: column; gap: 6px; }
+.krow { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; gap: 6px; align-items: center; }
+.krow .input { min-width: 0; max-width: none; padding: 6px 9px; }
+.krow__count { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 경쟁제품 줄 */
+.rrows { display: flex; flex-direction: column; gap: 6px; }
+.rrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.rrow .input { min-width: 0; max-width: none; padding: 6px 9px; }
+
+/* 가부 판단 */
+.ccheck { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ccheck__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--grid); flex: none; }
+.ccheck__dot--yes { background: var(--good); }
+.ccheck__dot--checking { background: var(--warning); }
+.ccheck__dot--no { background: var(--critical); }
+
+/* 사진 구역 */
+.czone { display: flex; flex-direction: column; gap: 8px; }
+.czone__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.czone__grid:empty { display: none; }
+
+.czone__item {
+  position: relative;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.czone__item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.czone__add {
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.czone__add:hover { color: var(--text); border-color: var(--accent); }
+.czone__add span { font-size: 1.1rem; line-height: 1; }
+
+.cboard__shot .czone__grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+
+/* 인쇄 — 보드만 남기고 화면 장치는 뺀다 */
+@media print {
+  .topbar, .ctools, .view__head, .toast, .sync { display: none !important; }
+  .view { max-width: none; padding: 0; }
+  .cboard { border: none; padding: 0; }
+  .ctext:hover, .ctext:focus { background: none; box-shadow: none; }
+  .czone__add, .img-thumb__x, .icon-btn { display: none !important; }
+}
+
+@media (max-width: 900px) {
+  .cboard { padding: 18px; }
+  .cboard__head { grid-template-columns: 1fr; }
+  .cboard__grid { grid-template-columns: 1fr; }
+  .cpanel--wide, .cpanel--full { grid-column: auto; }
+  .rrow { grid-template-columns: 1fr auto; }
+  .rrow .input { grid-column: 1 / -1; }
+  .ctools { top: 84px; }
+}
+
 /* ---------- 동기화 상태 ---------- */
 
 .sync {

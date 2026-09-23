@@ -124,6 +124,72 @@ const Store = (() => {
     return found ? found.seedId : "";
   }
 
+  /* ---------- 제품 컨셉보드 ----------
+     글 한 덩어리는 { text, font, size } 로 들고 있는다. 글꼴과 크기를
+     덩어리 단위로 고르게 해서, 글자마다 서식이 뒤섞이는 일을 피한다. */
+
+  function textPart(value) {
+    const part = value && typeof value === "object" ? value : {};
+    return {
+      text: typeof part.text === "string" ? part.text : "",
+      font: part.font || "sans",
+      size: Number(part.size) || 16,
+    };
+  }
+
+  function normalizeConcept(value) {
+    const c = value && typeof value === "object" ? value : {};
+    const out = {
+      headline: textPart(c.headline),
+      images: Array.isArray(c.images) ? c.images : [],
+      market: {
+        main: Array.isArray(c.market && c.market.main) ? c.market.main : [],
+        rivals: Array.isArray(c.market && c.market.rivals) ? c.market.rivals : [],
+        note: textPart(c.market && c.market.note),
+      },
+      rivals: Array.isArray(c.rivals) ? c.rivals : [],
+      trademark: {
+        state: (c.trademark && c.trademark.state) || "",
+        note: textPart(c.trademark && c.trademark.note),
+      },
+      beforeAfter: {
+        state: (c.beforeAfter && c.beforeAfter.state) || "",
+        note: textPart(c.beforeAfter && c.beforeAfter.note),
+      },
+      ads: {
+        images: Array.isArray(c.ads && c.ads.images) ? c.ads.images : [],
+        note: textPart(c.ads && c.ads.note),
+      },
+    };
+    CONCEPT_BLOCKS.forEach((block) => {
+      out[block.key] = textPart(c[block.key]);
+    });
+    return out;
+  }
+
+  /* "market.note" 처럼 점으로 이어진 길을 따라가 값을 바꾼다. */
+  function setConcept(productId, path, patch) {
+    const product = getProduct(productId);
+    if (!product) return;
+    const keys = String(path).split(".");
+    let node = product.concept;
+    for (let i = 0; i < keys.length - 1; i += 1) {
+      if (!node[keys[i]] || typeof node[keys[i]] !== "object") node[keys[i]] = {};
+      node = node[keys[i]];
+    }
+    const last = keys[keys.length - 1];
+    if (patch === null) node[last] = null;
+    else if (Array.isArray(patch)) node[last] = patch;
+    else node[last] = Object.assign({}, node[last], patch);
+    touchProduct(productId);
+    save();
+  }
+
+  function getConcept(productId) {
+    const product = getProduct(productId);
+    return product ? product.concept : null;
+  }
+
   /* 저장된 데이터가 구버전이어도 화면이 깨지지 않도록 빠진 값을 채운다. */
   function normalize() {
     state.ideas = (state.ideas || []).map((i) => {
@@ -165,6 +231,7 @@ const Store = (() => {
         p
       );
       product.category = migrateCategory(product.category);
+      product.concept = normalizeConcept(product.concept);
       const previous = product.stages || [];
       product.stages = STAGE_TEMPLATE.map((tpl) => {
         const existing = previous.find((s) => s.key === tpl.key);
@@ -193,6 +260,13 @@ const Store = (() => {
     };
     collect(state.ideas);
     collect(state.competitors);
+    /* 컨셉보드에 붙인 사진도 빠뜨리면 안 된다. 여기 빠지면 '쓰이지 않는 사진'
+       으로 보고 지워 버린다. */
+    (state.products || []).forEach((product) => {
+      const concept = product.concept || {};
+      collect([{ images: concept.images }]);
+      collect([{ images: (concept.ads || {}).images }]);
+    });
     return ids;
   }
 
@@ -627,6 +701,8 @@ const Store = (() => {
     updateProduct,
     removeProduct,
     getProduct,
+    getConcept,
+    setConcept,
     getStage,
     toggleTask,
     addTask,
