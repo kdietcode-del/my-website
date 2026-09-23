@@ -44,6 +44,10 @@ const App = (() => {
 
     const clearBtn = document.getElementById("clear-samples");
     if (clearBtn) clearBtn.hidden = !Store.hasSamples();
+
+    /* 기록에서 빠진 이미지 파일은 저장소에 남아 자리만 차지한다. 화면을 다시
+       그릴 때마다 한 번씩 훑어 정리한다. */
+    if (Images.isAvailable()) Images.pruneUnused(Store.usedImageIds());
   }
 
   /* ---------- 테마 ----------
@@ -81,31 +85,46 @@ const App = (() => {
 
   /* ---------- 백업 ---------- */
 
+  /* 이미지까지 함께 싣느라 시간이 걸릴 수 있어 진행 상황을 알려 준다. */
   function exportBackup() {
-    const blob = new Blob([Store.exportJSON()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const stamp = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.download = "런칭상황보드-백업-" + stamp + ".json";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    UI.toast("백업 파일을 내려받았습니다.");
+    UI.toast("백업 파일을 만드는 중…");
+    Store.exportJSON().then(
+      (json) => {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 10);
+        link.href = url;
+        link.download = "런칭상황보드-백업-" + stamp + ".json";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        const mb = (blob.size / 1048576).toFixed(1);
+        UI.toast("백업 파일을 내려받았습니다. (" + mb + "MB)");
+      },
+      () => UI.toast("백업 파일을 만들지 못했습니다.", "warn")
+    );
   }
 
   function importBackup(file) {
     const reader = new FileReader();
     reader.onload = () => {
+      let result;
       try {
-        Store.importJSON(String(reader.result));
-        Pipeline.setActive(null);
-        UI.toast("백업을 불러왔습니다.");
-        render();
+        result = Store.importJSON(String(reader.result));
       } catch (e) {
         UI.toast("불러오지 못했습니다. 내보내기로 만든 JSON 파일인지 확인해 주세요.", "warn");
+        return;
       }
+      Promise.resolve(result).then(
+        () => {
+          Pipeline.setActive(null);
+          UI.toast("백업을 불러왔습니다.");
+          render();
+        },
+        () => UI.toast("불러오지 못했습니다.", "warn")
+      );
     };
     reader.readAsText(file);
   }

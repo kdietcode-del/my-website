@@ -84,6 +84,13 @@ const Ideas = (() => {
         placeholder: "광고에서 무엇을 어떻게 보여줄지",
       },
       {
+        name: "images",
+        label: "이미지",
+        type: "images",
+        span: 2,
+        hint: "제품 컷, 레퍼런스 스크린샷, 무드보드 등을 붙여 둡니다.",
+      },
+      {
         name: "refs",
         label: "참고 레퍼런스",
         type: "refs",
@@ -274,6 +281,7 @@ const Ideas = (() => {
       '<article class="card idea-card" data-id="' + idea.id + '">' +
       (head.length ? '<header class="card__head">' + head.join("") + "</header>" : "") +
       '<h3 class="card__title">' + UI.escapeHtml(idea.name) + "</h3>" +
+      UI.thumbsHtml(idea.images, { limit: 4 }) +
       (idea.efficacy
         ? '<div class="card__block"><h4 class="card__label">컨셉</h4><p>' +
           UI.escapeHtml(idea.efficacy) + "</p></div>"
@@ -401,6 +409,12 @@ const Ideas = (() => {
         }
       });
     }
+
+    UI.bindThumbs(root, (group) => {
+      const card = group.closest(".idea-card");
+      const idea = Store.state.ideas.find((i) => i.id === card.dataset.id);
+      return (idea && idea.images) || [];
+    });
 
     root.querySelectorAll(".idea-card").forEach((card) => {
       const id = card.dataset.id;

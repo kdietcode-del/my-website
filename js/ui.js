@@ -226,6 +226,8 @@ const UI = (() => {
         "</div>";
     } else if (field.type === "refs") {
       control = refsControl(value || []);
+    } else if (field.type === "images") {
+      control = imagesControl(value || []);
     } else {
       const type = field.type || "text";
       control =
@@ -270,6 +272,148 @@ const UI = (() => {
     );
   }
 
+  /* ---------- 이미지 입력칸 ----------
+     파일은 줄여서 IndexedDB 에 담고, 인터넷 주소는 그대로 들고 있는다.
+     둘 다 한 줄에 썸네일로 늘어놓고 각각 뺄 수 있게 한다. */
+
+  const MAX_IMAGES = 8;
+
+  function imageThumbHtml(image) {
+    const src = image.url ? escapeHtml(safeUrl(image.url)) : "";
+    const inner = src
+      ? '<img src="' + src + '" alt="" loading="lazy">'
+      : '<img data-img-id="' + escapeHtml(image.id) + '" alt="" loading="lazy">';
+    return (
+      '<div class="img-thumb" data-image-id="' + escapeHtml(image.id) + '"' +
+      (image.url ? ' data-image-url="' + escapeHtml(image.url) + '"' : "") + ">" +
+      inner +
+      '<button type="button" class="img-thumb__x" data-image-remove aria-label="이미지 빼기">✕</button>' +
+      "</div>"
+    );
+  }
+
+  function imagesControl(images) {
+    const available = Images.isAvailable();
+    return (
+      '<div class="images" data-images>' +
+      '<div class="images__list" data-image-list>' + images.map(imageThumbHtml).join("") + "</div>" +
+      '<div class="images__add">' +
+      '<button type="button" class="btn btn--ghost btn--sm" data-image-pick' +
+      (available ? "" : " disabled") + ">+ 파일에서 고르기</button>" +
+      '<input type="file" accept="image/*" multiple hidden data-image-file>' +
+      '<input type="url" class="input" placeholder="또는 이미지 주소 붙여넣기 (https://…)" data-image-url-input>' +
+      '<button type="button" class="btn btn--ghost btn--sm" data-image-url-add>주소로 넣기</button>' +
+      "</div>" +
+      '<p class="field__hint" data-image-status>' +
+      (available
+        ? "최대 " + MAX_IMAGES + "장. 파일은 자동으로 줄여서 저장합니다."
+        : escapeHtml(Images.whyUnavailable()) + " 이미지 주소만 넣을 수 있습니다.") +
+      "</p>" +
+      "</div>"
+    );
+  }
+
+  function collectImages(root) {
+    const wrap = root.querySelector("[data-images]");
+    if (!wrap) return [];
+    return Array.from(wrap.querySelectorAll(".img-thumb")).map((node) => ({
+      id: node.dataset.imageId,
+      url: node.dataset.imageUrl || "",
+    }));
+  }
+
+  /* 폼 안에서 이미지 담기 · 빼기를 처리한다. */
+  function bindImages(node) {
+    const wrap = node.querySelector("[data-images]");
+    if (!wrap) return;
+    const list = wrap.querySelector("[data-image-list]");
+    const fileInput = wrap.querySelector("[data-image-file]");
+    const urlInput = wrap.querySelector("[data-image-url-input]");
+    const status = wrap.querySelector("[data-image-status]");
+
+    const count = () => list.querySelectorAll(".img-thumb").length;
+    const roomLeft = () => MAX_IMAGES - count();
+
+    function say(message) {
+      status.textContent = message;
+    }
+
+    wrap.querySelector("[data-image-pick]").addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", () => {
+      const files = Array.from(fileInput.files || []);
+      fileInput.value = "";
+      if (!files.length) return;
+      const room = roomLeft();
+      if (room <= 0) {
+        say("이미지는 " + MAX_IMAGES + "장까지 넣을 수 있습니다.");
+        return;
+      }
+      const picked = files.slice(0, room);
+      say(picked.length + "장 줄이는 중…");
+      Promise.all(
+        picked.map((file) =>
+          Images.addFile(file).then(
+            (saved) => ({ ok: true, saved }),
+            (error) => ({ ok: false, error })
+          )
+        )
+      ).then((results) => {
+        let added = 0;
+        results.forEach((result) => {
+          if (!result.ok) return;
+          list.insertAdjacentHTML("beforeend", imageThumbHtml({ id: result.saved.id, url: "" }));
+          added += 1;
+        });
+        Images.hydrate(list);
+        const failed = results.length - added;
+        say(
+          added + "장 담았습니다." +
+            (failed ? " " + failed + "장은 실패했습니다." : "") +
+            (files.length > picked.length ? " (" + MAX_IMAGES + "장 제한)" : "")
+        );
+      });
+    });
+
+    function addByUrl() {
+      const raw = urlInput.value.trim();
+      if (!raw) return;
+      const safe = safeUrl(raw);
+      if (!safe) {
+        say("주소를 알아볼 수 없습니다. http:// 또는 https:// 로 시작해야 합니다.");
+        return;
+      }
+      if (roomLeft() <= 0) {
+        say("이미지는 " + MAX_IMAGES + "장까지 넣을 수 있습니다.");
+        return;
+      }
+      list.insertAdjacentHTML(
+        "beforeend",
+        imageThumbHtml({ id: "url" + Date.now().toString(36), url: safe })
+      );
+      urlInput.value = "";
+      say("주소를 넣었습니다.");
+    }
+
+    wrap.querySelector("[data-image-url-add]").addEventListener("click", addByUrl);
+    urlInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addByUrl();
+      }
+    });
+
+    list.addEventListener("click", (event) => {
+      if (!event.target.matches("[data-image-remove]")) return;
+      /* 여기서는 화면에서만 뺀다. 실제 파일은 저장 후 쓰이지 않는 것만 정리한다. */
+      event.target.closest(".img-thumb").remove();
+      say("뺐습니다. 저장을 눌러야 반영됩니다.");
+    });
+
+    Images.hydrate(list);
+    markBrokenImages(list);
+  }
+
   function collectRefs(root) {
     const wrap = root.querySelector("[data-refs]");
     if (!wrap) return [];
@@ -311,6 +455,8 @@ const UI = (() => {
       }
     });
 
+    bindImages(node);
+
     const form = node.querySelector("#modal-form");
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -318,6 +464,10 @@ const UI = (() => {
       config.fields.forEach((field) => {
         if (field.type === "refs") {
           data[field.name] = collectRefs(node);
+          return;
+        }
+        if (field.type === "images") {
+          data[field.name] = collectImages(node);
           return;
         }
         if (field.type === "radio") {
@@ -342,6 +492,80 @@ const UI = (() => {
       closeModal();
       config.onSubmit(data);
     });
+  }
+
+  /* ---------- 카드 · 표에 보이는 썸네일 ---------- */
+
+  function thumbsHtml(images, options) {
+    const list = images || [];
+    if (!list.length) return "";
+    const opts = options || {};
+    const limit = opts.limit || list.length;
+    const shown = list.slice(0, limit);
+    const rest = list.length - shown.length;
+    const cells = shown
+      .map((image, index) => {
+        const src = image.url ? escapeHtml(safeUrl(image.url)) : "";
+        const img = src
+          ? '<img src="' + src + '" alt="" loading="lazy">'
+          : '<img data-img-id="' + escapeHtml(image.id) + '" alt="" loading="lazy">';
+        return (
+          '<button type="button" class="thumb" data-zoom-index="' + index +
+          '" aria-label="이미지 크게 보기">' + img + "</button>"
+        );
+      })
+      .join("");
+    return (
+      '<div class="thumbs' + (opts.size === "sm" ? " thumbs--sm" : "") + '" data-thumbs>' +
+      cells +
+      (rest > 0 ? '<span class="thumbs__more">+' + rest + "</span>" : "") +
+      "</div>"
+    );
+  }
+
+  /* 인터넷 주소로 넣은 이미지는 주소가 죽거나 바뀔 수 있다.
+     깨진 그림 아이콘 대신 자리 표시로 바꿔 둔다. */
+  function markBrokenImages(scope) {
+    scope.querySelectorAll("img[src]:not([data-broken-watch])").forEach((node) => {
+      node.dataset.brokenWatch = "1";
+      const fail = () => {
+        const holder = node.closest(".thumb, .img-thumb");
+        if (holder) holder.classList.add("is-broken");
+        node.remove();
+      };
+      if (node.complete && node.naturalWidth === 0) fail();
+      else node.addEventListener("error", fail);
+    });
+  }
+
+  /* 썸네일을 누르면 원본을 크게 띄운다. */
+  function bindThumbs(scope, getImages) {
+    scope.querySelectorAll("[data-thumbs]").forEach((group) => {
+      group.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-zoom-index]");
+        if (!button) return;
+        const images = getImages(group);
+        const image = images[Number(button.dataset.zoomIndex)];
+        if (image) openImage(image);
+      });
+    });
+    Images.hydrate(scope);
+    markBrokenImages(scope);
+  }
+
+  function openImage(image) {
+    const body = image.url
+      ? '<img class="lightbox__img" src="' + escapeHtml(safeUrl(image.url)) + '" alt="">'
+      : '<img class="lightbox__img" data-img-id="' + escapeHtml(image.id) + '" alt="">';
+    const node = openModal(
+      "이미지",
+      '<div class="lightbox">' + body + "</div>",
+      '<button type="button" class="btn btn--ghost" data-close>닫기</button>'
+    );
+    if (node) {
+      Images.hydrate(node);
+      markBrokenImages(node);
+    }
   }
 
   /* ---------- 확인 대화상자 ---------- */
@@ -379,6 +603,9 @@ const UI = (() => {
     statusBadge,
     chip,
     stars,
+    thumbsHtml,
+    bindThumbs,
+    openImage,
     toast,
     openModal,
     closeModal,

@@ -87,6 +87,7 @@ const Store = (() => {
           kind: "idea",
           tags: [],
           refs: [],
+          images: [],
           efficacyType: "",
           ingredients: "",
           status: "",
@@ -123,8 +124,24 @@ const Store = (() => {
       return product;
     });
     state.competitors = (state.competitors || []).map((c) =>
-      Object.assign({ id: uid(), productId: "", rating: 0, createdAt: nowISO() }, c)
+      Object.assign({ id: uid(), productId: "", rating: 0, images: [], createdAt: nowISO() }, c)
     );
+  }
+
+  /* 지금 어딘가에서 쓰이고 있는 이미지 열쇠 전부.
+     기록에서 빠진 이미지 파일을 정리할 때 쓴다. */
+  function usedImageIds() {
+    const ids = [];
+    const collect = (list) => {
+      (list || []).forEach((item) => {
+        (item.images || []).forEach((image) => {
+          if (image && image.id && !image.url) ids.push(image.id);
+        });
+      });
+    };
+    collect(state.ideas);
+    collect(state.competitors);
+    return ids;
   }
 
   /* ---------- 샘플 데이터 ---------- */
@@ -407,27 +424,34 @@ const Store = (() => {
 
   /* ---------- 내보내기 / 가져오기 ---------- */
 
+  /* 백업 파일 하나로 다른 기기에 그대로 옮겨갈 수 있도록 이미지도 함께 싣는다.
+     그래서 내보내기는 비동기다. */
   function exportJSON() {
-    return JSON.stringify(
-      {
-        exportedAt: nowISO(),
-        ideas: state.ideas,
-        products: state.products,
-        competitors: state.competitors,
-      },
-      null,
-      2
+    return Images.exportAll().then((images) =>
+      JSON.stringify(
+        {
+          exportedAt: nowISO(),
+          ideas: state.ideas,
+          products: state.products,
+          competitors: state.competitors,
+          images,
+        },
+        null,
+        2
+      )
     );
   }
 
   function importJSON(text) {
     const parsed = JSON.parse(text);
     if (!parsed || typeof parsed !== "object") throw new Error("형식이 올바르지 않습니다.");
-    state.ideas = parsed.ideas || [];
-    state.products = parsed.products || [];
-    state.competitors = parsed.competitors || [];
-    normalize();
-    save();
+    return Images.importAll(parsed.images).then(() => {
+      state.ideas = parsed.ideas || [];
+      state.products = parsed.products || [];
+      state.competitors = parsed.competitors || [];
+      normalize();
+      save();
+    });
   }
 
   return {
@@ -461,6 +485,7 @@ const Store = (() => {
     productProgress,
     overallProgress,
     competitorsFor,
+    usedImageIds,
     exportJSON,
     importJSON,
   };

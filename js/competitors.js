@@ -55,7 +55,14 @@ const Competitors = (() => {
           { value: "5", label: "★★★★★ 높음" },
         ],
       },
-      { name: "url", label: "참고 링크", type: "url", span: 2, placeholder: "https://" },
+      { name: "url", label: "상세페이지 링크", type: "url", span: 2, placeholder: "https://" },
+      {
+        name: "images",
+        label: "썸네일 · 이미지",
+        type: "images",
+        span: 2,
+        hint: "상세페이지에서 이미지를 복사해 오거나, 이미지 주소를 붙여넣으세요.",
+      },
       {
         name: "memo",
         label: "메모",
@@ -172,6 +179,11 @@ const Competitors = (() => {
         const product = c.productId ? Store.getProduct(c.productId) : null;
         return (
           '<tr data-id="' + c.id + '">' +
+          '<td class="cell-thumb">' +
+          (c.images && c.images.length
+            ? UI.thumbsHtml(c.images, { limit: 1, size: "sm" })
+            : '<span class="thumb thumb--empty" aria-hidden="true"></span>') +
+          "</td>" +
           "<td>" +
           '<span class="cell-strong">' + UI.escapeHtml(c.brand) + "</span>" +
           '<span class="cell-sub">' + UI.escapeHtml(c.name) + "</span>" +
@@ -205,6 +217,7 @@ const Competitors = (() => {
       '<div class="table-wrap">' +
       '<table class="table">' +
       "<thead><tr>" +
+      "<th><span class=\"sr-only\">썸네일</span></th>" +
       "<th>제품</th><th class=\"num\">가격</th><th>용량</th><th>핵심 성분</th>" +
       "<th>소구 포인트</th><th>채널</th><th>위협도</th><th>메모</th><th></th>" +
       "</tr></thead>" +
@@ -305,6 +318,12 @@ const Competitors = (() => {
     sortFilter.addEventListener("change", () => {
       filters.sort = sortFilter.value;
       App.render();
+    });
+
+    UI.bindThumbs(root, (group) => {
+      const row = group.closest("tr");
+      const competitor = Store.state.competitors.find((c) => c.id === row.dataset.id);
+      return (competitor && competitor.images) || [];
     });
 
     root.querySelectorAll("tbody tr").forEach((row) => {
