@@ -97,7 +97,14 @@ const Gate = (() => {
 
   /* ---------- 잠금 화면 ---------- */
 
+  /* 공유 서버가 켜져 있으면 서버가 비밀번호를 확인한다.
+     브라우저 안에서 검사하던 방식과 달리 우회할 수 없다. */
+  function serverMode() {
+    return typeof Remote !== "undefined" && Remote.configured();
+  }
+
   function showScreen(onPass) {
+    const shared = serverMode();
     const holder = document.createElement("div");
     holder.className = "gate";
     holder.innerHTML =
@@ -107,6 +114,11 @@ const Gate = (() => {
       '<p class="gate__sub">비밀번호를 입력해 주세요.</p>' +
       '<input type="password" class="gate__input" id="gate-input" placeholder="비밀번호" ' +
       'autocomplete="current-password" aria-label="비밀번호">' +
+      (shared
+        ? '<input type="text" class="gate__input" id="gate-who" placeholder="이름 (누가 고쳤는지 표시용)" ' +
+          'autocomplete="nickname" aria-label="이름" value="' +
+          String(Remote.who() || "").replace(/"/g, "&quot;") + '">'
+        : "") +
       '<button type="submit" class="btn btn--primary gate__submit">들어가기</button>' +
       '<p class="gate__msg" id="gate-msg" role="status" aria-live="polite"></p>' +
       "</form>";
@@ -114,21 +126,44 @@ const Gate = (() => {
     document.body.classList.add("is-locked");
 
     const input = holder.querySelector("#gate-input");
+    const whoInput = holder.querySelector("#gate-who");
     const message = holder.querySelector("#gate-msg");
+    const submit = holder.querySelector(".gate__submit");
     input.focus();
+
+    function pass() {
+      markUnlocked();
+      holder.remove();
+      document.body.classList.remove("is-locked");
+      onPass();
+    }
 
     holder.querySelector("form").addEventListener("submit", (event) => {
       event.preventDefault();
       const value = input.value;
       if (!value) return;
+      submit.disabled = true;
       message.textContent = "확인 중…";
+
+      if (shared) {
+        if (whoInput) Remote.setWho(whoInput.value);
+        Remote.login(value).then(
+          () => pass(),
+          (error) => {
+            submit.disabled = false;
+            message.textContent = error.message;
+            input.value = "";
+            input.focus();
+          }
+        );
+        return;
+      }
+
       derive(value, GATE_CONFIG.salt, GATE_CONFIG.iterations).then(
         (digest) => {
+          submit.disabled = false;
           if (digest === GATE_CONFIG.hash) {
-            markUnlocked();
-            holder.remove();
-            document.body.classList.remove("is-locked");
-            onPass();
+            pass();
           } else {
             message.textContent = "비밀번호가 맞지 않습니다.";
             input.value = "";
@@ -136,6 +171,7 @@ const Gate = (() => {
           }
         },
         () => {
+          submit.disabled = false;
           message.textContent = "확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.";
         }
       );
@@ -144,6 +180,12 @@ const Gate = (() => {
 
   /* 앱을 그리기 전에 부른다. 통과해야 onPass 가 실행된다. */
   function require(onPass) {
+    /* 공유 서버를 쓰면 서버가 문지기다. 토큰이 없으면 무조건 묻는다. */
+    if (serverMode()) {
+      if (Remote.signedIn()) onPass();
+      else showScreen(onPass);
+      return;
+    }
     if (!configured() || !cryptoReady() || isUnlocked()) {
       onPass();
       return;

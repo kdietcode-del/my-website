@@ -39,7 +39,25 @@ const Store = (() => {
 
   let storageWarned = false;
 
-  function save() {
+  /* 서버에 보낼 알맹이만 꺼낸다. 판 번호처럼 기기마다 다른 값은 뺀다. */
+  function snapshot() {
+    return {
+      ideas: state.ideas,
+      products: state.products,
+      competitors: state.competitors,
+    };
+  }
+
+  /* 서버에서 받은 내용으로 갈아끼운다. */
+  function replaceAll(data) {
+    state.ideas = (data && data.ideas) || [];
+    state.products = (data && data.products) || [];
+    state.competitors = (data && data.competitors) || [];
+    normalize();
+    saveLocal();
+  }
+
+  function saveLocal() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
@@ -51,6 +69,13 @@ const Store = (() => {
         }
       }
     }
+  }
+
+  /* 내용이 바뀔 때마다 부른다. 브라우저에 담고, 공유 서버가 켜져 있으면
+     보낼 예약도 건다. */
+  function save() {
+    saveLocal();
+    if (typeof Sync !== "undefined" && Sync.active()) Sync.schedule();
   }
 
   function load() {
@@ -612,6 +637,8 @@ const Store = (() => {
     overallProgress,
     competitorsFor,
     usedImageIds,
+    snapshot,
+    replaceAll,
     exportJSON,
     importJSON,
   };

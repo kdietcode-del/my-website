@@ -18,9 +18,11 @@ const Images = (() => {
 
   /* ---------- 저장소 열기 ---------- */
 
+  const OPEN_TIMEOUT_MS = 6000;
+
   function open() {
     if (dbPromise) return dbPromise;
-    dbPromise = new Promise((resolve, reject) => {
+    const opening = new Promise((resolve, reject) => {
       let request;
       try {
         request = indexedDB.open(DB_NAME, 1);
@@ -33,12 +35,43 @@ const Images = (() => {
         const db = request.result;
         if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
       };
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        /* 다른 탭이 저장소를 지우거나 바꾸려 하면 이 연결이 길을 막는다.
+           붙들고 있지 말고 놓아 준다 — 안 그러면 양쪽 다 멈춘다. */
+        db.onversionchange = () => {
+          db.close();
+          dbPromise = null;
+        };
+        resolve(db);
+      };
+      /* 열기 자체가 막히는 경우에도 영영 기다리지 않는다. */
+      request.onblocked = () => {
+        unavailableReason = "다른 탭이 이미지 저장소를 쓰고 있습니다. 그 탭을 닫고 새로고침해 주세요.";
+        dbPromise = null;
+        reject(new Error(unavailableReason));
+      };
       request.onerror = () => {
         unavailableReason = "이미지 저장소를 열지 못했습니다. 시크릿 모드에서는 제한될 수 있습니다.";
+        dbPromise = null;
         reject(request.error);
       };
     });
+
+    /* 저장소가 응답하지 않는 경우가 있다 (다른 탭이 붙들고 있거나 브라우저가
+       막아 둔 경우). 영영 기다리면 사진 담기 버튼이 멈춘 것처럼 보이므로,
+       일정 시간이 지나면 실패로 끝내 이유를 알려 준다. */
+    dbPromise = Promise.race([
+      opening,
+      new Promise((_, reject) =>
+        setTimeout(() => {
+          unavailableReason =
+            "이미지 저장소가 응답하지 않습니다. 이 사이트의 다른 탭을 닫고 새로고침해 주세요.";
+          dbPromise = null;
+          reject(new Error(unavailableReason));
+        }, OPEN_TIMEOUT_MS)
+      ),
+    ]);
     return dbPromise;
   }
 
@@ -115,10 +148,22 @@ const Images = (() => {
 
   /* ---------- 쓰기 / 읽기 ---------- */
 
+  /* 담을 때는 이 브라우저와 공유 서버 양쪽에 넣는다. 서버에 올라가야 다른
+     사람 화면에도 사진이 뜬다. 서버가 없으면 이 브라우저에만 담긴다. */
   function addFile(file) {
     return compress(file).then((blob) => {
       const id = newId();
-      return tx("readwrite", (store) => store.put(blob, id)).then(() => ({ id, size: blob.size }));
+      return tx("readwrite", (store) => store.put(blob, id))
+        .then(() => {
+          if (typeof Remote !== "undefined" && Remote.signedIn()) {
+            return Remote.putImage(id, blob).catch(() => {
+              if (typeof UI !== "undefined" && UI.toast) {
+                UI.toast("사진을 서버에 올리지 못했습니다. 다른 사람에게는 안 보일 수 있습니다.", "warn");
+              }
+            });
+          }
+        })
+        .then(() => ({ id, size: blob.size }));
     });
   }
 
@@ -161,7 +206,9 @@ const Images = (() => {
     );
   }
 
-  /* 쓰이지 않는 이미지를 지운다. 기록에서 사진을 빼도 파일은 남아 있기 때문이다. */
+  /* 이 브라우저에 받아 둔 사본 중 쓰이지 않는 것을 지운다.
+     서버 쪽은 건드리지 않는다 — 다른 사람이 방금 올린 사진을, 그 내용이
+     아직 내게 도착하기 전에 지워 버릴 수 있기 때문이다. */
   function pruneUnused(usedIds) {
     const keep = new Set(usedIds);
     return listAll()
@@ -173,16 +220,26 @@ const Images = (() => {
      읽기가 비동기라 HTML 을 만들 때는 자리만 잡아 두고,
      그려진 뒤에 이 함수가 실제 그림을 채운다. */
 
+  function hold(id, blob) {
+    const url = URL.createObjectURL(blob);
+    urlCache.set(id, url);
+    return url;
+  }
+
+  /* 이 브라우저에 없으면 서버에서 받아 와 담아 둔다. 다른 사람이 올린 사진을
+     내 화면에서도 보려면 이 경로가 필요하다. */
+  function fetchFromServer(id) {
+    if (typeof Remote === "undefined" || !Remote.signedIn()) return Promise.resolve("");
+    return Remote.getImage(id)
+      .then((blob) => putRaw(id, blob).then(() => hold(id, blob)))
+      .catch(() => "");
+  }
+
   function objectUrl(id) {
     if (urlCache.has(id)) return Promise.resolve(urlCache.get(id));
     return get(id)
-      .then((blob) => {
-        if (!blob) return "";
-        const url = URL.createObjectURL(blob);
-        urlCache.set(id, url);
-        return url;
-      })
-      .catch(() => "");
+      .then((blob) => (blob ? hold(id, blob) : fetchFromServer(id)))
+      .catch(() => fetchFromServer(id));
   }
 
   function hydrate(scope) {

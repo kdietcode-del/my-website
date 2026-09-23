@@ -188,6 +188,32 @@ const App = (() => {
       "</div>" +
       '<p class="settings__warn">불러오기는 <strong>지금 내용을 모두 덮어씁니다.</strong> 누르면 한 번 더 확인합니다.</p>' +
 
+      '<h3 class="settings__title">공유 서버</h3>' +
+      '<p class="settings__note">' +
+      (Remote.configured()
+        ? "연결됨 · 이 주소로 들어오는 누구나 같은 내용을 봅니다." +
+          (Remote.who() ? " 내 이름: <strong>" + UI.escapeHtml(Remote.who()) + "</strong>" : "")
+        : "설정하면 어느 기기에서 열어도 같은 내용이 보입니다. 지금은 이 브라우저에만 저장됩니다. 만드는 방법은 저장소의 worker/BOARD-SETUP.md 에 있습니다.") +
+      "</p>" +
+      '<div class="settings__row">' +
+      '<input type="url" class="input" id="set-server" placeholder="https://board.계정이름.workers.dev" value="' +
+      UI.escapeHtml(Remote.baseUrl()) + '">' +
+      '<button type="button" class="btn btn--ghost" data-set="server-save">저장</button>' +
+      '<button type="button" class="btn btn--ghost" data-set="server-test">연결 확인</button>' +
+      "</div>" +
+      '<div class="settings__row">' +
+      '<input type="text" class="input" id="set-who" placeholder="내 이름 (누가 고쳤는지 표시용)" value="' +
+      UI.escapeHtml(Remote.who()) + '">' +
+      '<button type="button" class="btn btn--ghost" data-set="who-save">이름 저장</button>' +
+      (Remote.signedIn()
+        ? '<button type="button" class="btn btn--ghost" data-set="server-logout">로그아웃</button>'
+        : "") +
+      "</div>" +
+      '<p class="settings__note" id="set-server-msg"></p>' +
+      (Remote.configured()
+        ? '<p class="settings__warn">공유 서버를 쓰는 동안에는 아래 \'비밀번호\' 설정을 쓰지 않습니다. 비밀번호는 서버에서 관리합니다.</p>'
+        : "") +
+
       '<h3 class="settings__title">썸네일 가져오기 서버</h3>' +
       '<p class="settings__note">경쟁제품 링크에서 제품명 · 가격 · 썸네일을 자동으로 받아오려면 주소가 필요합니다. 만드는 방법은 저장소의 worker/README.md 에 있습니다.</p>' +
       '<div class="settings__row">' +
@@ -229,6 +255,9 @@ const App = (() => {
   }
 
   function bindSettings(node) {
+    const serverInput = node.querySelector("#set-server");
+    const serverMsg = node.querySelector("#set-server-msg");
+    const whoInput = node.querySelector("#set-who");
     const proxyInput = node.querySelector("#set-proxy");
     const proxyMsg = node.querySelector("#set-proxy-msg");
     const passInput = node.querySelector("#set-pass");
@@ -249,6 +278,53 @@ const App = (() => {
           () => document.getElementById("import-input").click(),
           "덮어쓰기"
         );
+      }
+
+      if (action === "server-test") {
+        const value = UI.safeUrl(serverInput.value.trim());
+        if (!value) {
+          serverMsg.textContent = "먼저 주소를 넣어 주세요.";
+          return;
+        }
+        serverMsg.textContent = "확인 중…";
+        Remote.ping(value.replace(/\/+$/, "")).then(
+          () => (serverMsg.textContent = "서버가 응답했습니다. 저장을 누르세요."),
+          (error) => (serverMsg.textContent = "연결 실패 — " + error.message)
+        );
+      }
+
+      if (action === "server-save") {
+        const raw = serverInput.value.trim();
+        if (raw && !UI.safeUrl(raw)) {
+          serverMsg.textContent = "주소를 알아볼 수 없습니다. https:// 로 시작해야 합니다.";
+          return;
+        }
+        const next = raw ? UI.safeUrl(raw).replace(/\/+$/, "") : "";
+        const before = Remote.baseUrl();
+        if (next === before) {
+          serverMsg.textContent = "이미 같은 주소입니다.";
+          return;
+        }
+        /* 주소가 바뀌면 이전 로그인은 쓸 수 없다. */
+        Remote.logout();
+        Remote.setBaseUrl(next);
+        UI.closeModal();
+        UI.toast(next ? "공유 서버를 연결했습니다. 비밀번호를 다시 입력해 주세요." : "공유 서버 연결을 해제했습니다.");
+        setTimeout(() => location.reload(), 900);
+      }
+
+      if (action === "who-save") {
+        Remote.setWho(whoInput.value.trim());
+        serverMsg.textContent = whoInput.value.trim()
+          ? "이름을 저장했습니다. 다음 저장부터 표시됩니다."
+          : "이름을 지웠습니다.";
+      }
+
+      if (action === "server-logout") {
+        Remote.logout();
+        UI.closeModal();
+        UI.toast("로그아웃했습니다.");
+        setTimeout(() => location.reload(), 600);
       }
 
       if (action === "proxy-save") {
@@ -317,7 +393,17 @@ const App = (() => {
   /* ---------- 시작 ---------- */
 
   function start() {
+    /* 브라우저에 있던 내용을 먼저 그려 바로 보이게 하고, 공유 서버가 있으면
+       곧바로 서버 내용으로 맞춘다. */
     Store.load();
+    render();
+
+    Sync.init({
+      onChange: () => {
+        Pipeline.setActive(Pipeline.getActive());
+        render();
+      },
+    });
 
     const settingsBtn = document.getElementById("settings-btn");
     if (settingsBtn) settingsBtn.addEventListener("click", openSettings);

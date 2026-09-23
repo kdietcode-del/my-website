@@ -989,6 +989,18 @@ a { color: var(--accent); }
 .images__add { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .images__add .input { min-width: 180px; flex: 1 1 180px; }
 
+/* ---------- 동기화 상태 ---------- */
+
+.sync {
+  font-size: 0.75rem;
+  color: var(--muted);
+  align-self: center;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+.sync:empty { display: none; }
+.sync--warn { color: var(--critical); font-weight: 600; }
+
 /* ---------- 잠금 화면 ---------- */
 
 body.is-locked { overflow: hidden; }
