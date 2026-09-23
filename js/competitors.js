@@ -1,5 +1,5 @@
 /* ============================================================
-   3) 경쟁 제품 리서치 — 런칭 중인 제품별로 경쟁 제품 자료를 모아 본다
+   3) 경쟁제품 참고보드 — 런칭 중인 제품별로 경쟁 제품 자료를 모아 본다
    ============================================================ */
 
 const Competitors = (() => {
@@ -42,19 +42,6 @@ const Competitors = (() => {
         placeholder: "이 제품이 내세우는 효능과 카피",
       },
       { name: "channel", label: "판매 채널", type: "text", placeholder: "올리브영 · 자사몰" },
-      {
-        name: "rating",
-        label: "위협도",
-        type: "select",
-        options: [
-          { value: "0", label: "미평가" },
-          { value: "1", label: "★ 낮음" },
-          { value: "2", label: "★★" },
-          { value: "3", label: "★★★ 보통" },
-          { value: "4", label: "★★★★" },
-          { value: "5", label: "★★★★★ 높음" },
-        ],
-      },
       { name: "url", label: "상세페이지 링크", type: "url", span: 2, placeholder: "https://" },
       {
         name: "images",
@@ -75,14 +62,14 @@ const Competitors = (() => {
   }
 
   function normalizeSubmit(data) {
-    return Object.assign({}, data, { rating: Number(data.rating) || 0 });
+    return Object.assign({}, data);
   }
 
   function openCreate() {
     UI.openForm({
       title: "경쟁 제품 추가",
       fields: fieldSpec(),
-      values: { productId: filters.productId, rating: "0" },
+      values: { productId: filters.productId },
       submitLabel: "자료 추가",
       onSubmit: (data) => {
         Store.addCompetitor(normalizeSubmit(data));
@@ -98,7 +85,7 @@ const Competitors = (() => {
     UI.openForm({
       title: "경쟁 제품 수정",
       fields: fieldSpec(),
-      values: Object.assign({}, competitor, { rating: String(competitor.rating || 0) }),
+      values: Object.assign({}, competitor),
       submitLabel: "저장",
       onSubmit: (data) => {
         Store.updateCompetitor(id, normalizeSubmit(data));
@@ -194,7 +181,6 @@ const Competitors = (() => {
           "<td>" + UI.escapeHtml(c.ingredients || "—") + "</td>" +
           "<td>" + UI.escapeHtml(c.claims || "—") + "</td>" +
           "<td>" + UI.escapeHtml(c.channel || "—") + "</td>" +
-          "<td>" + UI.stars(c.rating) + "</td>" +
           "<td>" +
           (c.memo ? '<span class="cell-memo">' + UI.escapeHtml(c.memo) + "</span>" : '<span class="muted">—</span>') +
           "</td>" +
@@ -219,7 +205,7 @@ const Competitors = (() => {
       "<thead><tr>" +
       "<th><span class=\"sr-only\">썸네일</span></th>" +
       "<th>제품</th><th class=\"num\">가격</th><th>용량</th><th>핵심 성분</th>" +
-      "<th>소구 포인트</th><th>채널</th><th>위협도</th><th>메모</th><th></th>" +
+      "<th>소구 포인트</th><th>채널</th><th>메모</th><th></th>" +
       "</tr></thead>" +
       "<tbody>" + rows + "</tbody>" +
       "</table>" +
@@ -233,7 +219,8 @@ const Competitors = (() => {
   function sortList(list) {
     const sorted = list.slice();
     if (filters.sort === "price") sorted.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
-    else if (filters.sort === "rating") sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    else if (filters.sort === "priceAsc")
+      sorted.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
     else sorted.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
     return sorted;
   }
@@ -261,7 +248,7 @@ const Competitors = (() => {
       '<select class="select" data-filter-sort aria-label="정렬">' +
       [
         { value: "price", label: "가격 높은 순" },
-        { value: "rating", label: "위협도 높은 순" },
+        { value: "priceAsc", label: "가격 낮은 순" },
         { value: "recent", label: "최근 추가 순" },
       ]
         .map(
@@ -287,7 +274,7 @@ const Competitors = (() => {
     root.innerHTML =
       '<div class="view__head">' +
       "<div>" +
-      "<h2>경쟁 제품 리서치</h2>" +
+      "<h2>경쟁제품 참고보드</h2>" +
       '<p class="view__sub">런칭 준비 중인 제품별로 경쟁 상대를 모아 가격 · 성분 · 소구 포인트를 나란히 놓고 봅니다.</p>' +
       "</div>" +
       '<button type="button" class="btn btn--primary" data-act="create">+ 경쟁 제품 추가</button>' +

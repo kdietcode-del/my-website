@@ -4,9 +4,14 @@
 
 const STORAGE_KEY = "beauty-launch-board.v1";
 
-/* 아이디어 덤프 기본 목록의 판 번호. 올리면 이미 쓰고 있는 브라우저에도
+/* 차기 신제품 아이디어 기본 목록의 판 번호. 올리면 이미 쓰고 있는 브라우저에도
    새 목록이 한 번 들어간다 (사용자가 직접 쓴 항목은 그대로 둔다). */
 const SEED_VERSION = 3;
+
+/* 한 번만 돌리는 정리 작업의 판 번호. 기본 목록을 '추가' 하는 SEED_VERSION 과
+   따로 둔다. 정리 때문에 판 번호를 올렸다가, 사용자가 일부러 지운 항목까지
+   되살아나는 일을 막기 위해서다. */
+const CLEANUP_VERSION = 1;
 
 const Store = (() => {
   let state = {
@@ -14,6 +19,7 @@ const Store = (() => {
     products: [],
     competitors: [],
     seeded: false,
+    cleanupVersion: 0,
     seedVersion: 0,
   };
 
@@ -60,6 +66,7 @@ const Store = (() => {
         state = Object.assign(state, parsed);
         normalize();
         applySeedUpdate();
+        applyCleanup();
         return;
       } catch (e) {
         console.warn("저장된 데이터가 손상되어 샘플로 시작합니다.", e);
@@ -76,6 +83,12 @@ const Store = (() => {
     return Object.prototype.hasOwnProperty.call(LEGACY_CATEGORY_MAP, key)
       ? LEGACY_CATEGORY_MAP[key]
       : "";
+  }
+
+  /* 기본 목록의 이름 → seedId. 예전에 seedId 없이 저장된 항목을 알아보기 위한 것. */
+  function seedIdForName(name) {
+    const found = SEED.ideas.find((s) => s.name === name);
+    return found ? found.seedId : "";
   }
 
   /* 저장된 데이터가 구버전이어도 화면이 깨지지 않도록 빠진 값을 채운다. */
@@ -96,6 +109,12 @@ const Store = (() => {
         i
       );
       idea.category = migrateCategory(idea.category);
+      /* seedId 는 나중에 생긴 필드다. 이름으로 되찾아 붙여 두지 않으면
+         '이미 있는 항목' 검사가 빗나가 기본 목록이 한 번 더 들어간다. */
+      if (!idea.seedId) {
+        const found = seedIdForName(idea.name);
+        if (found) idea.seedId = found;
+      }
       return idea;
     });
     state.products = (state.products || []).map((p) => {
@@ -159,7 +178,7 @@ const Store = (() => {
     });
   }
 
-  /* 아이디어 덤프 기본 목록. 샘플이 아니라 실제 데이터라 sample 표시를 달지 않는다. */
+  /* 차기 신제품 아이디어 기본 목록. 샘플이 아니라 실제 데이터라 sample 표시를 달지 않는다. */
   function seedIdeas() {
     return SEED.ideas.map((i) => Object.assign({ id: uid(), createdAt: nowISO() }, i));
   }
@@ -187,9 +206,79 @@ const Store = (() => {
     save();
   }
 
+  /* 같은 항목이 둘 있을 때 어느 쪽을 남길지 정하는 점수.
+     '채워져 있는가' 가 아니라 '기본값에서 달라졌는가' 를 본다 — 둘 다 내용이
+     차 있으면 채움 여부로는 구분이 되지 않고, 사용자가 고친 쪽이 밀려난다. */
+  function editScore(idea) {
+    const base = SEED.ideas.find((s) => s.seedId === idea.seedId);
+    const fields = [
+      "name",
+      "efficacy",
+      "ingredients",
+      "usp",
+      "memo",
+      "category",
+      "efficacyType",
+      "status",
+    ];
+    let score = (idea.images || []).length * 100; // 직접 넣은 사진은 확실한 손질
+    fields.forEach((field) => {
+      const value = String(idea[field] || "");
+      if (!base) {
+        if (value) score += 1;
+        return;
+      }
+      if (value !== String(base[field] || "")) score += 50;
+      else if (value) score += 1;
+    });
+    score += (idea.tags || []).length;
+    score += (idea.refs || []).length;
+    return score;
+  }
+
+  /* 기본 목록이 두 번 들어간 브라우저를 정리한다.
+     같은 항목이 여럿이면 내용이 가장 많이 찬 하나만 남긴다.
+     기본 목록과 무관한 항목은 이름이 같아도 건드리지 않는다. */
+  function dedupeSeedIdeas(ideas) {
+    const kept = [];
+    const slotByKey = new Map();
+
+    ideas.forEach((idea) => {
+      const key = idea.seedId || seedIdForName(idea.name);
+      if (!key) {
+        kept.push(idea);
+        return;
+      }
+      idea.seedId = key;
+      if (!slotByKey.has(key)) {
+        slotByKey.set(key, kept.length);
+        kept.push(idea);
+        return;
+      }
+      const slot = slotByKey.get(key);
+      if (editScore(idea) > editScore(kept[slot])) kept[slot] = idea;
+    });
+
+    return kept;
+  }
+
+  function applyCleanup() {
+    if (state.cleanupVersion === CLEANUP_VERSION) return;
+    const before = (state.ideas || []).length;
+    state.ideas = dedupeSeedIdeas(state.ideas || []);
+    const removed = before - state.ideas.length;
+    state.cleanupVersion = CLEANUP_VERSION;
+    save();
+    if (removed > 0 && typeof UI !== "undefined" && UI.toast) {
+      /* 화면이 다 뜬 뒤에 알린다. */
+      setTimeout(() => UI.toast("중복으로 들어가 있던 아이디어 " + removed + "건을 정리했습니다."), 600);
+    }
+  }
+
   function seed() {
     state.ideas = seedIdeas();
     state.seedVersion = SEED_VERSION;
+    state.cleanupVersion = CLEANUP_VERSION;
     state.products = SEED.products.map((p) => {
       const rest = Object.assign({}, p);
       const doneUpTo = rest.doneUpTo || 0;

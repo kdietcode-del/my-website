@@ -5,13 +5,14 @@
 const App = (() => {
   const THEME_KEY = "beauty-launch-board.theme";
 
+  /* 지금 진행 중인 일이 먼저 오고, 아직 시작 안 한 아이디어가 마지막에 온다. */
   const TABS = [
-    { key: "ideas", label: "아이디어 덤프", view: () => Ideas },
     { key: "pipeline", label: "제품 런칭 상황보드", view: () => Pipeline },
-    { key: "competitors", label: "경쟁 제품 리서치", view: () => Competitors },
+    { key: "competitors", label: "경쟁제품 참고보드", view: () => Competitors },
+    { key: "ideas", label: "차기 신제품 아이디어", view: () => Ideas },
   ];
 
-  let activeTab = "ideas";
+  let activeTab = "pipeline";
 
   /* ---------- 탭 ---------- */
 
