@@ -106,7 +106,7 @@
 
 ```
 index.html          화면 뼈대
-style.css           디자인 (밝게 · 어둡게 자동 전환)
+style.css           디자인 (기본 밝게, 어둡게로 전환 가능)
 js/gate-config.js   비밀번호 설정 (비어 있으면 잠금 없음)
 js/gate.js          잠금 화면
 js/data.js          분류 기준, 8단계 정의 (초기 데이터는 비어 있음)

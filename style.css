@@ -993,6 +993,10 @@ a { color: var(--accent); }
 
 body.is-locked { overflow: hidden; }
 
+/* 잠금 화면이 덮고 있어도, 설정은 데이터가 올라오기 전엔 열리면 안 된다.
+   밝기 버튼은 잠겨 있어도 쓸 수 있게 둔다. */
+body.is-locked #settings-btn { display: none; }
+
 .gate {
   position: fixed;
   inset: 0;

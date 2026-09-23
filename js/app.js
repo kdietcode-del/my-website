@@ -70,14 +70,23 @@ const App = (() => {
     if (Images.isAvailable()) Images.pruneUnused(Store.usedImageIds());
   }
 
-  /* ---------- 테마 ----------
-     auto → light → dark 순환. 저장소를 못 쓰는 환경에서도 앱은 그대로 돈다. */
+  /* ---------- 밝기 ----------
+     처음 열면 밝게. PC 가 다크모드라고 해서 덩달아 어두워지지 않는다.
+     버튼을 누르면 밝게 → 어둡게 → 시스템 설정 순으로 돈다. */
+
+  const THEME_ORDER = ["light", "dark", "auto"];
+
+  const THEME_LABEL = {
+    light: { icon: "☀", name: "밝게" },
+    dark: { icon: "☾", name: "어둡게" },
+    auto: { icon: "◐", name: "시스템 설정" },
+  };
 
   function readTheme() {
     try {
-      return localStorage.getItem(THEME_KEY) || "auto";
+      return localStorage.getItem(THEME_KEY) || "light";
     } catch (e) {
-      return "auto";
+      return "light";
     }
   }
 
@@ -86,21 +95,23 @@ const App = (() => {
     else document.documentElement.setAttribute("data-theme", mode);
     const btn = document.getElementById("theme-toggle");
     if (btn) {
-      const label = mode === "auto" ? "시스템 설정" : mode === "light" ? "밝게" : "어둡게";
-      btn.textContent = (mode === "auto" ? "◐" : mode === "light" ? "☀" : "☾") + " " + label;
-      btn.setAttribute("aria-label", "화면 테마: " + label + ". 눌러서 변경");
+      const meta = THEME_LABEL[mode] || THEME_LABEL.light;
+      btn.textContent = meta.icon + " 밝기 설정";
+      /* 버튼에는 이름만 두고, 지금 어떤 상태인지는 읽어 주는 쪽에 담는다. */
+      btn.title = "지금: " + meta.name;
+      btn.setAttribute("aria-label", "밝기 설정. 지금 " + meta.name + ". 눌러서 변경");
     }
   }
 
   function cycleTheme() {
-    const order = ["auto", "light", "dark"];
-    const next = order[(order.indexOf(readTheme()) + 1) % order.length];
+    const next = THEME_ORDER[(THEME_ORDER.indexOf(readTheme()) + 1) % THEME_ORDER.length];
     try {
       localStorage.setItem(THEME_KEY, next);
     } catch (e) {
-      /* 저장은 실패해도 이번 세션 동안은 적용된다. */
+      /* 저장은 실패해도 이번 방문 동안은 적용된다. */
     }
     applyTheme(next);
+    UI.toast("밝기: " + (THEME_LABEL[next] || THEME_LABEL.light).name);
   }
 
   /* ---------- 백업 ---------- */
@@ -308,9 +319,6 @@ const App = (() => {
   function start() {
     Store.load();
 
-    const themeBtn = document.getElementById("theme-toggle");
-    if (themeBtn) themeBtn.addEventListener("click", cycleTheme);
-
     const settingsBtn = document.getElementById("settings-btn");
     if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
 
@@ -325,9 +333,15 @@ const App = (() => {
     render();
   }
 
-  /* 테마는 잠금 화면에도 적용돼야 하므로 먼저 건다. */
+  /* 밝기는 잠금 화면에도 적용돼야 하므로 먼저 건다.
+     버튼 연결도 여기서 해야 한다 — 잠겨 있는 동안에도 눌리는 버튼이라,
+     잠금 해제 후에 연결하면 눌러도 아무 일이 없다. */
   function init() {
     applyTheme(readTheme());
+
+    const themeBtn = document.getElementById("theme-toggle");
+    if (themeBtn) themeBtn.addEventListener("click", cycleTheme);
+
     Gate.require(start);
   }
 
