@@ -228,6 +228,14 @@ const UI = (() => {
       control = refsControl(value || []);
     } else if (field.type === "images") {
       control = imagesControl(value || []);
+    } else if (field.type === "fetchmeta") {
+      /* 라벨 없이 버튼 한 줄만 놓는다 */
+      return (
+        '<div class="field field--wide fetchmeta" data-fetchmeta>' +
+        '<button type="button" class="btn btn--ghost" data-fetch-go>링크에서 가져오기</button>' +
+        '<p class="field__hint" data-fetch-msg></p>' +
+        "</div>"
+      );
     } else {
       const type = field.type || "text";
       control =
@@ -414,6 +422,37 @@ const UI = (() => {
     markBrokenImages(list);
   }
 
+  /* '링크에서 가져오기' 버튼 */
+  function bindFetchMeta(node) {
+    const wrap = node.querySelector("[data-fetchmeta]");
+    if (!wrap) return;
+    const button = wrap.querySelector("[data-fetch-go]");
+    const message = wrap.querySelector("[data-fetch-msg]");
+
+    button.addEventListener("click", () => {
+      const urlField = node.querySelector('[name="url"]');
+      const target = safeUrl(urlField ? urlField.value : "");
+      if (!target) {
+        message.textContent = "먼저 상세페이지 링크를 넣어 주세요.";
+        return;
+      }
+      button.disabled = true;
+      message.textContent = "가져오는 중…";
+      Meta.fetchMeta(App.proxyUrl(), target).then(
+        (data) => {
+          button.disabled = false;
+          const result = Meta.applyToForm(node, data);
+          message.textContent = Meta.describe(result);
+          markBrokenImages(node);
+        },
+        (error) => {
+          button.disabled = false;
+          message.textContent = error.message + " 직접 입력하셔도 됩니다.";
+        }
+      );
+    });
+  }
+
   function collectRefs(root) {
     const wrap = root.querySelector("[data-refs]");
     if (!wrap) return [];
@@ -456,6 +495,7 @@ const UI = (() => {
     });
 
     bindImages(node);
+    bindFetchMeta(node);
 
     const form = node.querySelector("#modal-form");
     form.addEventListener("submit", (event) => {

@@ -42,7 +42,15 @@ const Competitors = (() => {
         placeholder: "이 제품이 내세우는 효능과 카피",
       },
       { name: "channel", label: "판매 채널", type: "text", placeholder: "올리브영 · 자사몰" },
-      { name: "url", label: "상세페이지 링크", type: "url", span: 2, placeholder: "https://" },
+      {
+        name: "url",
+        label: "상세페이지 링크",
+        type: "url",
+        span: 2,
+        placeholder: "https://",
+        hint: "주소를 넣고 아래 '링크에서 가져오기' 를 누르면 제품명 · 가격 · 썸네일을 자동으로 채웁니다.",
+      },
+      { name: "__fetch", label: "", type: "fetchmeta", span: 2 },
       {
         name: "images",
         label: "썸네일 · 이미지",

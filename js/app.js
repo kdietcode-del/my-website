@@ -4,6 +4,25 @@
 
 const App = (() => {
   const THEME_KEY = "beauty-launch-board.theme";
+  const PROXY_KEY = "beauty-launch-board.proxy";
+
+  /* 썸네일 가져오기 서버 주소. 비어 있으면 그 기능만 쉬고 나머지는 그대로 돈다. */
+  function proxyUrl() {
+    try {
+      return localStorage.getItem(PROXY_KEY) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function setProxyUrl(value) {
+    try {
+      if (value) localStorage.setItem(PROXY_KEY, value);
+      else localStorage.removeItem(PROXY_KEY);
+    } catch (e) {
+      /* 저장을 못 해도 이번 방문 동안은 쓸 수 있게 둔다. */
+    }
+  }
 
   /* 지금 진행 중인 일이 먼저 오고, 아직 시작 안 한 아이디어가 마지막에 온다. */
   const TABS = [
@@ -130,33 +149,148 @@ const App = (() => {
     reader.readAsText(file);
   }
 
-  /* ---------- 시작 ---------- */
+  /* ---------- 설정 ----------
+     데이터를 지우거나 덮어쓰는 기능은 전부 여기 모아 둔다.
+     상단 막대에 그대로 두면 잘못 눌렀을 때 되돌릴 수 없다. */
 
-  function init() {
-    applyTheme(readTheme());
-    Store.load();
+  function downloadText(filename, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
-    const themeBtn = document.getElementById("theme-toggle");
-    if (themeBtn) themeBtn.addEventListener("click", cycleTheme);
+  function openSettings() {
+    const locked = Gate.configured();
+    const body =
+      '<section class="settings">' +
+      '<h3 class="settings__title">백업</h3>' +
+      '<p class="settings__note">입력한 내용은 이 브라우저에만 있습니다. 가끔 백업 파일을 내려받아 두세요. 이미지도 함께 담깁니다.</p>' +
+      '<div class="settings__row">' +
+      '<button type="button" class="btn btn--ghost" data-set="export">백업 파일 내려받기</button>' +
+      '<button type="button" class="btn btn--ghost" data-set="import">백업 파일 불러오기</button>' +
+      "</div>" +
+      '<p class="settings__warn">불러오기는 <strong>지금 내용을 모두 덮어씁니다.</strong> 누르면 한 번 더 확인합니다.</p>' +
 
-    const exportBtn = document.getElementById("export-btn");
-    if (exportBtn) exportBtn.addEventListener("click", exportBackup);
+      '<h3 class="settings__title">썸네일 가져오기 서버</h3>' +
+      '<p class="settings__note">경쟁제품 링크에서 제품명 · 가격 · 썸네일을 자동으로 받아오려면 주소가 필요합니다. 만드는 방법은 저장소의 worker/README.md 에 있습니다.</p>' +
+      '<div class="settings__row">' +
+      '<input type="url" class="input" id="set-proxy" placeholder="https://thumbnail.계정이름.workers.dev" value="' +
+      UI.escapeHtml(proxyUrl()) + '">' +
+      '<button type="button" class="btn btn--ghost" data-set="proxy-save">저장</button>' +
+      '<button type="button" class="btn btn--ghost" data-set="proxy-test">연결 확인</button>' +
+      "</div>" +
+      '<p class="settings__note" id="set-proxy-msg"></p>' +
 
-    const importInput = document.getElementById("import-input");
-    const importBtn = document.getElementById("import-btn");
-    if (importBtn && importInput) {
-      importBtn.addEventListener("click", () => importInput.click());
-      importInput.addEventListener("change", () => {
-        if (importInput.files && importInput.files[0]) importBackup(importInput.files[0]);
-        importInput.value = "";
-      });
-    }
+      '<h3 class="settings__title">비밀번호</h3>' +
+      '<p class="settings__note">지금 상태 · <strong>' +
+      (locked ? "설정됨" : "없음 (누구나 열람 가능)") + "</strong></p>" +
+      '<div class="settings__row">' +
+      '<input type="password" class="input" id="set-pass" placeholder="새 비밀번호" autocomplete="new-password">' +
+      '<button type="button" class="btn btn--ghost" data-set="pass-make">설정 파일 만들기</button>' +
+      (locked ? '<button type="button" class="btn btn--ghost" data-set="pass-clear">비밀번호 없애기</button>' : "") +
+      "</div>" +
+      '<p class="settings__note" id="set-pass-msg"></p>' +
+      '<p class="settings__warn">정적 사이트의 비밀번호는 <strong>지나가는 사람을 막는 수준</strong>입니다. 브라우저 개발자 도구를 아는 사람은 우회할 수 있습니다.</p>' +
 
-    const clearBtn = document.getElementById("clear-samples");
-    if (clearBtn) {
-      clearBtn.addEventListener("click", () => {
+      '<h3 class="settings__title">샘플 데이터</h3>' +
+      '<div class="settings__row">' +
+      '<button type="button" class="btn btn--ghost" data-set="clear-samples"' +
+      (Store.hasSamples() ? "" : " disabled") + ">예시로 들어 있는 샘플 지우기</button>" +
+      "</div>" +
+      '<p class="settings__note">' +
+      (Store.hasSamples() ? "직접 입력하거나 수정한 항목은 남습니다." : "남아 있는 샘플이 없습니다.") +
+      "</p>" +
+      "</section>";
+
+    const node = UI.openModal(
+      "설정",
+      body,
+      '<button type="button" class="btn btn--ghost" data-close>닫기</button>'
+    );
+    if (!node) return;
+    bindSettings(node);
+  }
+
+  function bindSettings(node) {
+    const proxyInput = node.querySelector("#set-proxy");
+    const proxyMsg = node.querySelector("#set-proxy-msg");
+    const passInput = node.querySelector("#set-pass");
+    const passMsg = node.querySelector("#set-pass-msg");
+
+    node.addEventListener("click", (event) => {
+      const action = event.target.dataset ? event.target.dataset.set : "";
+      if (!action) return;
+
+      if (action === "export") {
+        exportBackup();
+      }
+
+      if (action === "import") {
+        UI.closeModal();
         UI.confirmAction(
-          "예시로 들어 있는 샘플 데이터를 모두 지울까요? 직접 입력하거나 수정한 항목은 남습니다.",
+          "백업 파일을 불러오면 지금 들어 있는 내용이 모두 사라지고 파일 내용으로 바뀝니다. 계속할까요?",
+          () => document.getElementById("import-input").click(),
+          "덮어쓰기"
+        );
+      }
+
+      if (action === "proxy-save") {
+        const value = proxyInput.value.trim();
+        if (value && !UI.safeUrl(value)) {
+          proxyMsg.textContent = "주소를 알아볼 수 없습니다. https:// 로 시작해야 합니다.";
+          return;
+        }
+        setProxyUrl(value ? UI.safeUrl(value).replace(/\/+$/, "") : "");
+        proxyMsg.textContent = value ? "저장했습니다." : "지웠습니다.";
+      }
+
+      if (action === "proxy-test") {
+        const value = UI.safeUrl(proxyInput.value.trim());
+        if (!value) {
+          proxyMsg.textContent = "먼저 주소를 넣어 주세요.";
+          return;
+        }
+        proxyMsg.textContent = "확인 중…";
+        Meta.fetchMeta(value.replace(/\/+$/, ""), "https://example.com").then(
+          () => (proxyMsg.textContent = "연결됐습니다."),
+          (error) => (proxyMsg.textContent = "연결 실패 — " + error.message)
+        );
+      }
+
+      if (action === "pass-make") {
+        const value = passInput.value;
+        if (!value || value.length < 4) {
+          passMsg.textContent = "4자 이상으로 정해 주세요.";
+          return;
+        }
+        passMsg.textContent = "만드는 중…";
+        Gate.buildConfig(value).then(
+          (result) => {
+            passInput.value = "";
+            downloadText("gate-config.js", result.fileText);
+            passMsg.textContent =
+              "gate-config.js 파일을 내려받았습니다. 이 파일로 프로젝트의 js/gate-config.js 를 덮어쓰고 GitHub 에 올리면 잠깁니다.";
+          },
+          (error) => (passMsg.textContent = error.message)
+        );
+      }
+
+      if (action === "pass-clear") {
+        downloadText("gate-config.js", Gate.clearConfigText());
+        passMsg.textContent =
+          "잠금 없는 gate-config.js 를 내려받았습니다. 이 파일로 덮어쓰고 올리면 비밀번호가 없어집니다.";
+      }
+
+      if (action === "clear-samples") {
+        UI.closeModal();
+        UI.confirmAction(
+          "예시로 들어 있는 샘플 데이터를 지울까요? 직접 입력하거나 수정한 항목은 남습니다.",
           () => {
             Store.clearSamples();
             Pipeline.setActive(null);
@@ -165,13 +299,39 @@ const App = (() => {
           },
           "샘플 지우기"
         );
+      }
+    });
+  }
+
+  /* ---------- 시작 ---------- */
+
+  function start() {
+    Store.load();
+
+    const themeBtn = document.getElementById("theme-toggle");
+    if (themeBtn) themeBtn.addEventListener("click", cycleTheme);
+
+    const settingsBtn = document.getElementById("settings-btn");
+    if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
+
+    const importInput = document.getElementById("import-input");
+    if (importInput) {
+      importInput.addEventListener("change", () => {
+        if (importInput.files && importInput.files[0]) importBackup(importInput.files[0]);
+        importInput.value = "";
       });
     }
 
     render();
   }
 
-  return { init, render, go };
+  /* 테마는 잠금 화면에도 적용돼야 하므로 먼저 건다. */
+  function init() {
+    applyTheme(readTheme());
+    Gate.require(start);
+  }
+
+  return { init, render, go, proxyUrl, openSettings };
 })();
 
 document.addEventListener("DOMContentLoaded", App.init);
