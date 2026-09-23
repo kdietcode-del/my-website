@@ -48,6 +48,14 @@ const Store = (() => {
     };
   }
 
+  function isEmpty() {
+    return (
+      !(state.ideas || []).length &&
+      !(state.products || []).length &&
+      !(state.competitors || []).length
+    );
+  }
+
   /* 서버에서 받은 내용으로 갈아끼운다. */
   function replaceAll(data) {
     state.ideas = (data && data.ideas) || [];
@@ -638,6 +646,7 @@ const Store = (() => {
     competitorsFor,
     usedImageIds,
     snapshot,
+    isEmpty,
     replaceAll,
     exportJSON,
     importJSON,

@@ -43,6 +43,20 @@ const Sync = (() => {
     return Remote.getState().then(
       (state) => {
         const incoming = Number(state.version) || 0;
+
+        /* 서버가 아직 비어 있는데 내 브라우저에는 내용이 있다면, 받아서 덮어쓰면
+           안 된다 — 그러면 지금 있는 내용이 통째로 사라진다. 반대로 올린다.
+           처음 연결할 때 딱 한 번 벌어지는 상황이다. */
+        if (incoming === 0 && !Store.isEmpty()) {
+          version = 0;
+          setStatus("서버가 비어 있어 올리는 중…");
+          return push().then(() => {
+            UI.toast("이 브라우저의 내용을 공유 서버에 올렸습니다.");
+            onChange();
+            return true;
+          });
+        }
+
         if (!opts.force && incoming === version) return false;
         version = incoming;
         if (state.data) {
