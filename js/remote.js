@@ -11,6 +11,15 @@ const Remote = (() => {
   const TOKEN_KEY = "beauty-launch-board.token";
   const NAME_KEY = "beauty-launch-board.who";
 
+  /* 기본 서버 주소. 여기 적어 두지 않으면 들어오는 사람마다 설정에서 주소를
+     넣어야 한다 — 팀원에게 그걸 시킬 수는 없다.
+     주소를 옮기면 이 값을 바꾸면 된다. */
+  const DEFAULT_BASE = "https://board.kdietcode.workers.dev";
+
+  /* 설정에서 주소를 비우면 '서버 안 씀' 으로 두기 위한 표시.
+     빈 값으로 두면 기본 주소가 다시 살아나 구분이 되지 않는다. */
+  const OFF = "off";
+
   /* ---------- 설정값 ---------- */
 
   function read(key) {
@@ -30,8 +39,15 @@ const Remote = (() => {
     }
   }
 
-  const baseUrl = () => read(BASE_KEY);
-  const setBaseUrl = (value) => write(BASE_KEY, value ? String(value).replace(/\/+$/, "") : "");
+  function baseUrl() {
+    const saved = read(BASE_KEY);
+    if (saved === OFF) return "";
+    return saved || DEFAULT_BASE;
+  }
+
+  function setBaseUrl(value) {
+    write(BASE_KEY, value ? String(value).replace(/\/+$/, "") : OFF);
+  }
   const token = () => read(TOKEN_KEY);
   const setToken = (value) => write(TOKEN_KEY, value);
   const who = () => read(NAME_KEY);
