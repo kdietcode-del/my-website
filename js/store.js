@@ -83,7 +83,10 @@ const Store = (() => {
       const previous = product.stages || [];
       product.stages = STAGE_TEMPLATE.map((tpl) => {
         const existing = previous.find((s) => s.key === tpl.key);
-        return Object.assign({ key: tpl.key, tasks: [], note: "", dueDate: "" }, existing);
+        const stage = Object.assign({ key: tpl.key, tasks: [], note: "", dueDate: "" }, existing);
+        /* 항목별 메모는 나중에 추가된 필드라, 옛 데이터에는 빈 값을 채워 준다. */
+        stage.tasks = stage.tasks.map((task) => Object.assign({ memo: "" }, task));
+        return stage;
       });
       return product;
     });
@@ -96,7 +99,7 @@ const Store = (() => {
 
   function makeStages(doneUpTo, partialRatio) {
     return STAGE_TEMPLATE.map((tpl, index) => {
-      const tasks = tpl.tasks.map((label) => ({ id: uid(), label, done: false }));
+      const tasks = tpl.tasks.map((label) => ({ id: uid(), label, done: false, memo: "" }));
       if (index < doneUpTo) {
         tasks.forEach((t) => (t.done = true));
       } else if (index === doneUpTo && partialRatio > 0) {
@@ -224,7 +227,7 @@ const Store = (() => {
   function addTask(productId, stageKey, label) {
     const stage = getStage(productId, stageKey);
     if (!stage || !label.trim()) return;
-    stage.tasks.push({ id: uid(), label: label.trim(), done: false });
+    stage.tasks.push({ id: uid(), label: label.trim(), done: false, memo: "" });
     touchProduct(productId);
     save();
   }
@@ -233,6 +236,16 @@ const Store = (() => {
     const stage = getStage(productId, stageKey);
     if (!stage) return;
     stage.tasks = stage.tasks.filter((t) => t.id !== taskId);
+    save();
+  }
+
+  function setTaskMemo(productId, stageKey, taskId, memo) {
+    const stage = getStage(productId, stageKey);
+    if (!stage) return;
+    const task = stage.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    task.memo = memo;
+    touchProduct(productId);
     save();
   }
 
@@ -378,6 +391,7 @@ const Store = (() => {
     toggleTask,
     addTask,
     removeTask,
+    setTaskMemo,
     setStageField,
     resetStage,
     completeStage,

@@ -526,7 +526,14 @@ a { color: var(--accent); }
 
 /* ---------- 단계 ---------- */
 
-.stage-list { display: flex; flex-direction: column; gap: 10px; }
+/* 9단계는 긴 목록이 아니라 나란히 놓인 블록이다. 화면이 넓으면 2열, 좁으면 1열. */
+.stage-list {
+  display: grid;
+  /* min() 이 없으면 화면이 440px 보다 좁을 때 칸이 화면 밖으로 넘친다 */
+  grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
 
 .stage {
   background: var(--surface);
@@ -540,15 +547,13 @@ a { color: var(--accent); }
 
 .stage__head {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto 180px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  cursor: pointer;
-  list-style: none;
+  gap: 10px 14px;
+  padding: 16px 18px 14px;
 }
-.stage__head::-webkit-details-marker { display: none; }
-.stage__head:hover { background: var(--surface-2); }
+.stage__status { justify-self: end; }
+.stage__meter { grid-column: 2 / -1; }
 
 .stage__no {
   width: 26px;
@@ -565,13 +570,7 @@ a { color: var(--accent); }
 
 .stage__title { display: flex; flex-direction: column; min-width: 0; }
 .stage__name { font-weight: 650; }
-.stage__desc {
-  font-size: 0.8125rem;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.stage__desc { font-size: 0.8125rem; color: var(--muted); }
 .stage__status { display: flex; align-items: center; gap: 10px; }
 .stage__count {
   font-size: 0.8125rem;
@@ -582,16 +581,47 @@ a { color: var(--accent); }
 .stage__body { padding: 4px 18px 18px; border-top: 1px solid var(--grid); }
 
 .task-list { margin: 14px 0 10px; }
+
+/* 할 일 | 메모 | 삭제 — 메모 칸은 항상 펼쳐져 있다 */
 .task {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--grid);
 }
-.task__label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9375rem; }
-.task__label input { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+.task:last-child { border-bottom: none; }
+
+.task__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  padding-top: 6px;
+}
+.task__label input { width: 16px; height: 16px; accent-color: var(--accent); flex: none; margin-top: 3px; }
 .task--done .task__label span { color: var(--muted); text-decoration: line-through; }
+
+.task__memo {
+  font: inherit;
+  font-size: 0.875rem;
+  width: 100%;
+  min-height: 34px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.5;
+}
+.task__memo::placeholder { color: var(--muted); }
+.task__memo:hover { border-color: var(--line); }
+.task__memo:focus { background: var(--surface); }
+.task .icon-btn { margin-top: 4px; }
 
 .task-add { display: flex; gap: 6px; margin-bottom: 16px; }
 .task-add .input { flex: 1; max-width: none; }
@@ -823,9 +853,6 @@ a { color: var(--accent); }
   .hero { grid-template-columns: 1fr; }
   .tiles { grid-template-columns: repeat(3, 1fr); }
   .summary { grid-template-columns: 1fr; gap: 16px; }
-  .stage__head { grid-template-columns: 26px minmax(0, 1fr) auto; row-gap: 10px; }
-  .stage__meter { grid-column: 1 / -1; }
-  .stage__desc { white-space: normal; }
 }
 
 @media (max-width: 620px) {
@@ -837,6 +864,12 @@ a { color: var(--accent); }
   .ref-row { grid-template-columns: 1fr auto; }
   .ref-row .ref-url { grid-column: 1 / 2; }
   .stage__fields { grid-template-columns: 1fr; }
+  /* 좁은 화면에서는 메모를 할 일 아래로 내린다.
+     칸을 명시하지 않으면 삭제 버튼이 메모 아래 줄로 밀려난다. */
+  .task { grid-template-columns: minmax(0, 1fr) auto; }
+  .task__label { grid-column: 1; grid-row: 1; }
+  .task .icon-btn { grid-column: 2; grid-row: 1; }
+  .task__memo { grid-column: 1 / -1; grid-row: 2; }
   .bar-row { grid-template-columns: 1fr auto; gap: 4px 10px; }
   .bar-row__label { grid-column: 1 / -1; white-space: normal; }
   .input { max-width: none; }

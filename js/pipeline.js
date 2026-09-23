@@ -4,11 +4,9 @@
 
 const Pipeline = (() => {
   let activeId = null;          // 열려 있는 제품. null 이면 전체 목록
-  const expanded = new Set();   // 펼쳐 둔 단계 (다시 그려도 유지)
 
   function setActive(id) {
     activeId = id || null;
-    expanded.clear();
   }
 
   function getActive() {
@@ -222,6 +220,10 @@ const Pipeline = (() => {
               '<input type="checkbox" data-task="' + task.id + '"' + (task.done ? " checked" : "") + ">" +
               "<span>" + UI.escapeHtml(task.label) + "</span>" +
               "</label>" +
+              /* 항목별 메모는 접지 않고 항상 펼쳐 둔다 — 내용이 길어지면 칸이 따라 늘어난다. */
+              '<textarea class="task__memo" rows="1" data-task-memo="' + task.id +
+              '" placeholder="메모" aria-label="' + UI.escapeHtml(task.label) + ' 메모">' +
+              UI.escapeHtml(task.memo || "") + "</textarea>" +
               '<button type="button" class="icon-btn icon-btn--quiet" data-task-remove="' + task.id +
               '" aria-label="' + UI.escapeHtml(task.label) + ' 항목 삭제">✕</button>' +
               "</li>"
@@ -249,22 +251,19 @@ const Pipeline = (() => {
     );
   }
 
-  function stageHtml(product, stage, currentKey) {
-    const open = expanded.has(stage.key) || (!expanded.size && stage.key === currentKey);
-    if (open) expanded.add(stage.key);
+  /* 9단계는 접히는 목록이 아니라 각각 독립된 블록으로 항상 펼쳐 둔다. */
+  function stageHtml(product, stage) {
     const ratio = Store.stageProgress(stage);
     const status = UI.statusOf(ratio);
     return (
-      '<details class="stage stage--' + status.key + '" data-stage="' + stage.key + '"' +
-      (open ? " open" : "") + ">" +
-      '<summary class="stage__head">' + stageHeaderHtml(product, stage) + "</summary>" +
+      '<section class="stage stage--' + status.key + '" data-stage="' + stage.key + '">' +
+      '<header class="stage__head">' + stageHeaderHtml(product, stage) + "</header>" +
       '<div class="stage__body">' + stageBodyHtml(product, stage) + "</div>" +
-      "</details>"
+      "</section>"
     );
   }
 
   function detailHtml(product) {
-    const progress = Store.productProgress(product);
     return (
       '<div class="view__head">' +
       "<div>" +
@@ -282,15 +281,26 @@ const Pipeline = (() => {
       "</div>" +
       '<section class="summary" id="product-summary">' + summaryHtml(product) + "</section>" +
       '<div class="stage-list">' +
-      product.stages.map((stage) => stageHtml(product, stage, progress.currentStage)).join("") +
+      product.stages.map((stage) => stageHtml(product, stage)).join("") +
       "</div>"
     );
+  }
+
+  /* 메모 칸이 내용만큼 늘어나게 한다. */
+  function autoGrow(area) {
+    area.style.height = "auto";
+    area.style.height = area.scrollHeight + "px";
+  }
+
+  function growAll(scope) {
+    scope.querySelectorAll("[data-task-memo]").forEach(autoGrow);
   }
 
   /* ---------- 부분 갱신 ----------
      체크 하나 눌렀다고 화면 전체를 다시 그리면 펼친 단계와 스크롤이 튄다.
      바뀌는 곳만 손본다. */
 
+  /* 체크만 바뀌었을 때 — 머리말(상태·진행률)만 손본다. */
   function refreshStage(root, product, stageKey) {
     const stage = product.stages.find((s) => s.key === stageKey);
     const node = root.querySelector('[data-stage="' + stageKey + '"]');
@@ -299,6 +309,19 @@ const Pipeline = (() => {
     const status = UI.statusOf(ratio);
     node.className = "stage stage--" + status.key;
     node.querySelector(".stage__head").innerHTML = stageHeaderHtml(product, stage);
+  }
+
+  /* 할 일이 늘거나 줄었을 때 — 그 블록만 통째로 다시 그린다.
+     화면 전체를 다시 그리면 보고 있던 위치가 튄다. */
+  function refreshStageBlock(root, product, stageKey) {
+    const stage = product.stages.find((s) => s.key === stageKey);
+    const node = root.querySelector('[data-stage="' + stageKey + '"]');
+    if (!stage || !node) return;
+    node.outerHTML = stageHtml(product, stage);
+    const fresh = root.querySelector('[data-stage="' + stageKey + '"]');
+    bindStage(root, product, fresh);
+    growAll(fresh);
+    refreshSummary(root, product);
   }
 
   function refreshSummary(root, product) {
@@ -358,63 +381,84 @@ const Pipeline = (() => {
     root.querySelector('[data-act="edit"]').addEventListener("click", () => openEdit(product.id));
     root.querySelector('[data-act="remove"]').addEventListener("click", () => remove(product.id));
 
-    root.querySelectorAll(".stage").forEach((node) => {
-      const stageKey = node.dataset.stage;
+    root.querySelectorAll(".stage").forEach((node) => bindStage(root, product, node));
+    growAll(root);
+  }
 
-      node.addEventListener("toggle", () => {
-        if (node.open) expanded.add(stageKey);
-        else expanded.delete(stageKey);
-      });
+  function bindStage(root, product, node) {
+    if (!node) return;
+    const stageKey = node.dataset.stage;
 
-      node.querySelectorAll("[data-task]").forEach((box) => {
-        box.addEventListener("change", () => {
-          Store.toggleTask(product.id, stageKey, box.dataset.task);
-          box.closest(".task").classList.toggle("task--done", box.checked);
-          refreshStage(root, product, stageKey);
-          refreshSummary(root, product);
-        });
+    /* 항목별 메모 — 타이핑이 멈추면 저장한다. */
+    node.querySelectorAll("[data-task-memo]").forEach((area) => {
+      let timer = null;
+      autoGrow(area);
+      area.addEventListener("input", () => {
+        autoGrow(area);
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          Store.setTaskMemo(product.id, stageKey, area.dataset.taskMemo, area.value);
+        }, 250);
       });
+      area.addEventListener("blur", () => {
+        clearTimeout(timer);
+        Store.setTaskMemo(product.id, stageKey, area.dataset.taskMemo, area.value);
+      });
+    });
 
-      node.querySelectorAll("[data-task-remove]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          Store.removeTask(product.id, stageKey, btn.dataset.taskRemove);
-          App.render();
-        });
+    node.querySelectorAll("[data-task]").forEach((box) => {
+      box.addEventListener("change", () => {
+        Store.toggleTask(product.id, stageKey, box.dataset.task);
+        box.closest(".task").classList.toggle("task--done", box.checked);
+        refreshStage(root, product, stageKey);
+        refreshSummary(root, product);
       });
+    });
 
-      const input = node.querySelector("[data-task-input]");
-      const addBtn = node.querySelector("[data-task-add]");
-      const add = () => {
-        if (!input.value.trim()) return;
-        Store.addTask(product.id, stageKey, input.value);
-        App.render();
-      };
-      addBtn.addEventListener("click", add);
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          add();
-        }
+    node.querySelectorAll("[data-task-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        Store.removeTask(product.id, stageKey, btn.dataset.taskRemove);
+        refreshStageBlock(root, product, stageKey);
       });
+    });
 
-      const note = node.querySelector("[data-stage-note]");
-      note.addEventListener("change", () => {
-        Store.setStageField(product.id, stageKey, "note", note.value);
-      });
+    const input = node.querySelector("[data-task-input]");
+    const addBtn = node.querySelector("[data-task-add]");
+    const add = () => {
+      if (!input.value.trim()) return;
+      Store.addTask(product.id, stageKey, input.value);
+      refreshStageBlock(root, product, stageKey);
+      /* 연달아 여러 개 적을 수 있도록 입력칸에 커서를 돌려준다. */
+      const nextInput = root.querySelector(
+        '[data-stage="' + stageKey + '"] [data-task-input]'
+      );
+      if (nextInput) nextInput.focus();
+    };
+    addBtn.addEventListener("click", add);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        add();
+      }
+    });
 
-      const due = node.querySelector("[data-stage-due]");
-      due.addEventListener("change", () => {
-        Store.setStageField(product.id, stageKey, "dueDate", due.value);
-      });
+    const note = node.querySelector("[data-stage-note]");
+    note.addEventListener("change", () => {
+      Store.setStageField(product.id, stageKey, "note", note.value);
+    });
 
-      node.querySelector("[data-stage-complete]").addEventListener("click", () => {
-        Store.completeStage(product.id, stageKey);
-        App.render();
-      });
-      node.querySelector("[data-stage-reset]").addEventListener("click", () => {
-        Store.resetStage(product.id, stageKey);
-        App.render();
-      });
+    const due = node.querySelector("[data-stage-due]");
+    due.addEventListener("change", () => {
+      Store.setStageField(product.id, stageKey, "dueDate", due.value);
+    });
+
+    node.querySelector("[data-stage-complete]").addEventListener("click", () => {
+      Store.completeStage(product.id, stageKey);
+      refreshStageBlock(root, product, stageKey);
+    });
+    node.querySelector("[data-stage-reset]").addEventListener("click", () => {
+      Store.resetStage(product.id, stageKey);
+      refreshStageBlock(root, product, stageKey);
     });
   }
 
