@@ -404,6 +404,41 @@ const Store = (() => {
     save();
   }
 
+  /* 화면에서 끌어다 놓은 결과를 그대로 받는다.
+     목록에 없던 id 는 무시하고, 빠진 항목은 뒤에 붙여 잃어버리지 않는다. */
+  function setTaskOrder(productId, stageKey, orderedIds) {
+    const stage = getStage(productId, stageKey);
+    if (!stage) return;
+    const byId = new Map(stage.tasks.map((t) => [t.id, t]));
+    const next = [];
+    orderedIds.forEach((id) => {
+      const task = byId.get(id);
+      if (task) {
+        next.push(task);
+        byId.delete(id);
+      }
+    });
+    byId.forEach((task) => next.push(task));
+    stage.tasks = next;
+    touchProduct(productId);
+    save();
+  }
+
+  /* 키보드로 한 칸씩 옮길 때 쓴다. */
+  function moveTask(productId, stageKey, taskId, step) {
+    const stage = getStage(productId, stageKey);
+    if (!stage) return false;
+    const from = stage.tasks.findIndex((t) => t.id === taskId);
+    if (from < 0) return false;
+    const to = from + step;
+    if (to < 0 || to >= stage.tasks.length) return false;
+    const [moved] = stage.tasks.splice(from, 1);
+    stage.tasks.splice(to, 0, moved);
+    touchProduct(productId);
+    save();
+    return true;
+  }
+
   function setTaskMemo(productId, stageKey, taskId, memo) {
     const stage = getStage(productId, stageKey);
     if (!stage) return;
@@ -564,6 +599,8 @@ const Store = (() => {
     addTask,
     removeTask,
     setTaskMemo,
+    setTaskOrder,
+    moveTask,
     setStageField,
     resetStage,
     completeStage,

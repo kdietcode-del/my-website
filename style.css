@@ -576,9 +576,10 @@ a { color: var(--accent); }
 
 /* 블록이 좁아지면 메모를 할 일 오른쪽에 두지 않고 아래로 내린다 */
 @container (max-width: 420px) {
-  .task { grid-template-columns: minmax(0, 1fr) auto; }
-  .task__label { grid-column: 1; grid-row: 1; }
-  .task .icon-btn { grid-column: 2; grid-row: 1; opacity: 1; }
+  .task { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .task__grip { grid-column: 1; grid-row: 1; }
+  .task__label { grid-column: 2; grid-row: 1; }
+  .task .icon-btn { grid-column: 3; grid-row: 1; opacity: 1; }
   .task__memo { grid-column: 1 / -1; grid-row: 2; }
 }
 .stage--doing { border-left-color: var(--warning); }
@@ -621,15 +622,34 @@ a { color: var(--accent); }
 
 .task-list { margin: 14px 0 10px; }
 
-/* 할 일 | 메모 | 삭제 — 메모 칸은 항상 펼쳐져 있다 */
+/* 손잡이 | 할 일 | 메모 | 삭제 — 메모 칸은 항상 펼쳐져 있다 */
 .task {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: start;
   gap: 10px;
   padding: 5px 0;
   border-bottom: 1px solid var(--grid);
 }
+
+/* 순서 바꾸기 손잡이 */
+.task__grip {
+  font: inherit;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--grid);
+  padding: 8px 2px;
+  margin-top: 2px;
+  cursor: grab;
+  border-radius: 4px;
+}
+.task:hover .task__grip { color: var(--muted); }
+.task__grip:hover { color: var(--text); background: var(--surface-2); }
+.task__grip:active { cursor: grabbing; }
+
+.task.is-dragging { opacity: 0.45; }
+.task.is-over { background: var(--surface-2); }
 .task:last-child { border-bottom: none; }
 
 .task__label {
@@ -1081,9 +1101,10 @@ body.is-locked { overflow: hidden; }
   .stage__fields { grid-template-columns: 1fr; }
   /* 좁은 화면에서는 메모를 할 일 아래로 내린다.
      칸을 명시하지 않으면 삭제 버튼이 메모 아래 줄로 밀려난다. */
-  .task { grid-template-columns: minmax(0, 1fr) auto; }
-  .task__label { grid-column: 1; grid-row: 1; }
-  .task .icon-btn { grid-column: 2; grid-row: 1; }
+  .task { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .task__grip { grid-column: 1; grid-row: 1; }
+  .task__label { grid-column: 2; grid-row: 1; }
+  .task .icon-btn { grid-column: 3; grid-row: 1; }
   .task__memo { grid-column: 1 / -1; grid-row: 2; }
   .bar-row { grid-template-columns: 1fr auto; gap: 4px 10px; }
   .bar-row__label { grid-column: 1 / -1; white-space: normal; }

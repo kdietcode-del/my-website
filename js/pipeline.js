@@ -233,7 +233,11 @@ const Pipeline = (() => {
       ? stage.tasks
           .map(
             (task) =>
-              '<li class="task' + (task.done ? " task--done" : "") + '">' +
+              '<li class="task' + (task.done ? " task--done" : "") +
+              '" data-task-id="' + task.id + '">' +
+              '<button type="button" class="task__grip" data-task-grip draggable="true" ' +
+              'aria-label="' + UI.escapeHtml(task.label) + ' 순서 바꾸기. 끌어서 옮기거나 위·아래 화살표를 누르세요">' +
+              '<span aria-hidden="true">⠿</span></button>' +
               '<label class="task__label">' +
               '<input type="checkbox" data-task="' + task.id + '"' + (task.done ? " checked" : "") + ">" +
               "<span>" + UI.escapeHtml(task.label) + "</span>" +
@@ -407,6 +411,74 @@ const Pipeline = (() => {
     growAll(root);
   }
 
+  /* ---------- 할 일 순서 바꾸기 ----------
+     손잡이(⠿)를 끌어서 옮긴다. 메모 칸의 글자 선택을 방해하지 않도록,
+     손잡이를 잡았을 때만 그 줄이 끌리게 한다.
+     끌기는 키보드로 못 하므로 손잡이에 포커스를 두고 ↑ ↓ 로도 옮길 수 있다. */
+  function bindTaskReorder(root, product, node) {
+    const stageKey = node.dataset.stage;
+    const list = node.querySelector(".task-list");
+    if (!list) return;
+
+    let dragging = null;
+
+    const persist = () => {
+      const ids = Array.from(list.querySelectorAll(".task")).map((li) => li.dataset.taskId);
+      Store.setTaskOrder(product.id, stageKey, ids);
+    };
+
+    list.querySelectorAll("[data-task-grip]").forEach((grip) => {
+      const row = grip.closest(".task");
+
+      grip.addEventListener("dragstart", (event) => {
+        dragging = row;
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        /* 파이어폭스는 데이터가 없으면 끌기를 시작하지 않는다. */
+        event.dataTransfer.setData("text/plain", row.dataset.taskId);
+        if (event.dataTransfer.setDragImage) event.dataTransfer.setDragImage(row, 20, 16);
+      });
+
+      grip.addEventListener("dragend", () => {
+        if (dragging) dragging.classList.remove("is-dragging");
+        list.querySelectorAll(".task").forEach((li) => li.classList.remove("is-over"));
+        dragging = null;
+        persist();
+      });
+
+      grip.addEventListener("keydown", (event) => {
+        const step = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        if (!Store.moveTask(product.id, stageKey, row.dataset.taskId, step)) return;
+        refreshStageBlock(root, product, stageKey);
+        /* 다시 그린 뒤에도 같은 손잡이에 포커스를 돌려준다. */
+        const fresh = root.querySelector(
+          '[data-stage="' + stageKey + '"] [data-task-id="' + row.dataset.taskId + '"] [data-task-grip]'
+        );
+        if (fresh) fresh.focus();
+      });
+    });
+
+    list.addEventListener("dragover", (event) => {
+      if (!dragging) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const over = event.target.closest(".task");
+      if (!over || over === dragging) return;
+      const box = over.getBoundingClientRect();
+      const after = event.clientY > box.top + box.height / 2;
+      list.querySelectorAll(".task").forEach((li) => li.classList.remove("is-over"));
+      over.classList.add("is-over");
+      list.insertBefore(dragging, after ? over.nextSibling : over);
+    });
+
+    list.addEventListener("drop", (event) => {
+      if (!dragging) return;
+      event.preventDefault();
+    });
+  }
+
   function bindStage(root, product, node) {
     if (!node) return;
     const stageKey = node.dataset.stage;
@@ -427,6 +499,8 @@ const Pipeline = (() => {
         Store.setTaskMemo(product.id, stageKey, area.dataset.taskMemo, area.value);
       });
     });
+
+    bindTaskReorder(root, product, node);
 
     node.querySelectorAll("[data-task]").forEach((box) => {
       box.addEventListener("change", () => {
