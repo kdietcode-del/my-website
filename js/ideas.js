@@ -3,7 +3,7 @@
    ============================================================ */
 
 const Ideas = (() => {
-  const filters = { kind: "all", category: "all", query: "" };
+  const filters = { kind: "all", efficacyType: "all", category: "all", query: "" };
 
   const KIND_OPTIONS = [
     { value: "idea", label: "내 아이디어" },
@@ -29,33 +29,59 @@ const Ideas = (() => {
         span: 2,
       },
       {
+        name: "efficacyType",
+        label: "피부효능",
+        type: "select",
+        options: [{ value: "", label: "선택 안 함" }].concat(
+          EFFICACIES.map((e) => ({ value: e.key, label: e.label }))
+        ),
+        hint: "어떤 피부 고민을 겨냥하는지",
+      },
+      {
         name: "category",
         label: "카테고리",
         type: "select",
-        options: CATEGORIES.map((c) => ({ value: c.key, label: c.label })),
+        options: [{ value: "", label: "선택 안 함" }].concat(
+          CATEGORIES.map((c) => ({ value: c.key, label: c.label }))
+        ),
+        hint: "어떤 제형으로 나올지",
+      },
+      {
+        name: "status",
+        label: "진행 상태",
+        type: "select",
+        options: STATUSES.map((s) => ({ value: s.key, label: s.label })),
       },
       {
         name: "tags",
         label: "태그",
         type: "text",
-        placeholder: "진정, 민감성, 앰플",
+        placeholder: "잡티흔적, 톤업미백",
         hint: "쉼표로 구분합니다.",
       },
       {
         name: "efficacy",
-        label: "효능",
+        label: "컨셉",
         type: "textarea",
         rows: 3,
         span: 2,
-        placeholder: "어떤 피부 고민을 어떻게 해결하는지",
+        placeholder: "어떤 피부 고민을 어떻게 해결하는 제품인지",
+      },
+      {
+        name: "ingredients",
+        label: "성분",
+        type: "textarea",
+        rows: 2,
+        span: 2,
+        placeholder: "Niacinamide 5% / Alpha-arbutin 2%",
       },
       {
         name: "usp",
-        label: "USP · 차별점",
+        label: "광고 소구점",
         type: "textarea",
         rows: 3,
         span: 2,
-        placeholder: "경쟁 제품 대신 이걸 골라야 하는 단 하나의 이유",
+        placeholder: "광고에서 무엇을 어떻게 보여줄지",
       },
       {
         name: "refs",
@@ -79,7 +105,7 @@ const Ideas = (() => {
     UI.openForm({
       title: "아이디어 추가",
       fields: fieldSpec(),
-      values: { kind: "idea", category: "skincare" },
+      values: { kind: "idea", category: "", efficacyType: "", status: "" },
       submitLabel: "판에 올리기",
       onSubmit: (data) => {
         Store.addIdea(data);
@@ -105,7 +131,7 @@ const Ideas = (() => {
     });
   }
 
-  /* 아이디어를 런칭 상황판으로 넘긴다. 9단계 체크리스트가 함께 생성된다. */
+  /* 아이디어를 런칭 상황판으로 넘긴다. 8단계 체크리스트가 함께 생성된다. */
   function promote(id) {
     const idea = Store.state.ideas.find((i) => i.id === id);
     if (!idea) return;
@@ -114,10 +140,20 @@ const Ideas = (() => {
       fields: [
         { name: "name", label: "제품명", type: "text", required: true, span: 2 },
         {
+          name: "efficacyType",
+          label: "피부효능",
+          type: "select",
+          options: [{ value: "", label: "선택 안 함" }].concat(
+            EFFICACIES.map((e) => ({ value: e.key, label: e.label }))
+          ),
+        },
+        {
           name: "category",
           label: "카테고리",
           type: "select",
-          options: CATEGORIES.map((c) => ({ value: c.key, label: c.label })),
+          options: [{ value: "", label: "선택 안 함" }].concat(
+            CATEGORIES.map((c) => ({ value: c.key, label: c.label }))
+          ),
         },
         { name: "owner", label: "담당자", type: "text", placeholder: "이름" },
         { name: "targetDate", label: "목표 런칭일", type: "date" },
@@ -141,12 +177,13 @@ const Ideas = (() => {
       values: {
         name: idea.name,
         category: idea.category,
-        memo: [idea.usp, idea.memo].filter(Boolean).join("\n\n"),
+        efficacyType: idea.efficacyType,
+        memo: [idea.usp, idea.ingredients, idea.memo].filter(Boolean).join("\n\n"),
       },
-      submitLabel: "9단계 상황판 만들기",
+      submitLabel: "8단계 상황판 만들기",
       onSubmit: (data) => {
         const product = Store.addProduct(Object.assign({ fromIdeaId: id }, data));
-        UI.toast("런칭 상황판에 추가했습니다. 9단계 체크리스트가 준비됐어요.");
+        UI.toast("런칭 상황판에 추가했습니다. 8단계 체크리스트가 준비됐어요.");
         App.go("pipeline", product.id);
       },
     });
@@ -168,11 +205,13 @@ const Ideas = (() => {
     const query = filters.query.trim().toLowerCase();
     return Store.state.ideas.filter((idea) => {
       if (filters.kind !== "all" && idea.kind !== filters.kind) return false;
+      if (filters.efficacyType !== "all" && idea.efficacyType !== filters.efficacyType) return false;
       if (filters.category !== "all" && idea.category !== filters.category) return false;
       if (!query) return true;
       const haystack = [
         idea.name,
         idea.efficacy,
+        idea.ingredients,
         idea.usp,
         idea.memo,
         (idea.tags || []).join(" "),
@@ -210,22 +249,38 @@ const Ideas = (() => {
   function cardHtml(idea) {
     const isReference = idea.kind === "reference";
     const tags = (idea.tags || []).map((t) => UI.chip("#" + t)).join("");
+    const efficacyName = UI.efficacyLabel(idea.efficacyType);
+    const statusName = idea.status ? UI.statusLabel(idea.status) : "";
     return (
       '<article class="card idea-card" data-id="' + idea.id + '">' +
       '<header class="card__head">' +
       '<span class="kind kind--' + (isReference ? "ref" : "own") + '">' +
       (isReference ? "타사 레퍼런스" : "내 아이디어") +
       "</span>" +
-      UI.chip(UI.categoryLabel(idea.category), "chip--cat chip--cat-" + UI.escapeHtml(idea.category || "etc")) +
+      (efficacyName ? UI.chip(efficacyName, "chip--eff") : "") +
+      (idea.category
+        ? UI.chip(
+            UI.categoryLabel(idea.category),
+            "chip--cat chip--cat-" + UI.escapeHtml(idea.category)
+          )
+        : "") +
+      (statusName
+        ? '<span class="chip chip--status chip--status-' + UI.escapeHtml(idea.status) + '">' +
+          UI.escapeHtml(statusName) + "</span>"
+        : "") +
       (idea.sample ? '<span class="chip chip--sample">샘플</span>' : "") +
       "</header>" +
       '<h3 class="card__title">' + UI.escapeHtml(idea.name) + "</h3>" +
       (idea.efficacy
-        ? '<div class="card__block"><h4 class="card__label">효능</h4><p>' +
+        ? '<div class="card__block"><h4 class="card__label">컨셉</h4><p>' +
           UI.escapeHtml(idea.efficacy) + "</p></div>"
         : "") +
+      (idea.ingredients
+        ? '<div class="card__block"><h4 class="card__label">성분</h4><p class="mono">' +
+          UI.escapeHtml(idea.ingredients) + "</p></div>"
+        : "") +
       (idea.usp
-        ? '<div class="card__block"><h4 class="card__label">USP · 차별점</h4><p>' +
+        ? '<div class="card__block"><h4 class="card__label">광고 소구점</h4><p>' +
           UI.escapeHtml(idea.usp) + "</p></div>"
         : "") +
       refsHtml(idea.refs) +
@@ -261,6 +316,14 @@ const Ideas = (() => {
       )
       .join("");
 
+    const efficacyOptions =
+      '<option value="all">피부효능 전체</option>' +
+      EFFICACIES.map(
+        (e) =>
+          '<option value="' + e.key + '"' + (filters.efficacyType === e.key ? " selected" : "") + ">" +
+          UI.escapeHtml(e.label) + "</option>"
+      ).join("");
+
     const categoryOptions =
       '<option value="all">카테고리 전체</option>' +
       CATEGORIES.map(
@@ -279,8 +342,9 @@ const Ideas = (() => {
       "</div>" +
       '<div class="toolbar">' +
       '<div class="segmented" role="group" aria-label="구분 필터">' + segments + "</div>" +
+      '<select class="select" data-filter-efficacy aria-label="피부효능 필터">' + efficacyOptions + "</select>" +
       '<select class="select" data-filter-category aria-label="카테고리 필터">' + categoryOptions + "</select>" +
-      '<input type="search" class="input" data-filter-query placeholder="제품명 · 효능 · 태그 검색" value="' +
+      '<input type="search" class="input" data-filter-query placeholder="제품명 · 컨셉 · 성분 · 태그 검색" value="' +
       UI.escapeHtml(filters.query) + '" aria-label="검색">' +
       "</div>" +
       (list.length
@@ -304,6 +368,14 @@ const Ideas = (() => {
         App.render();
       });
     });
+
+    const efficacySelect = root.querySelector("[data-filter-efficacy]");
+    if (efficacySelect) {
+      efficacySelect.addEventListener("change", () => {
+        filters.efficacyType = efficacySelect.value;
+        App.render();
+      });
+    }
 
     const categorySelect = root.querySelector("[data-filter-category]");
     if (categorySelect) {

@@ -29,12 +29,12 @@
   --warning: #fab219;
   --critical: #d03b3b;
 
-  /* 카테고리 식별 점 */
-  --cat-skincare: #eb6834;
-  --cat-makeup: #1baf7a;
-  --cat-hair: #eda100;
-  --cat-body: #e87ba4;
-  --cat-inner: #008300;
+  /* 카테고리(제형) 식별 점 */
+  --cat-ampoule: #eb6834;
+  --cat-cleanser: #1baf7a;
+  --cat-cream: #eda100;
+  --cat-toner: #e87ba4;
+  --cat-body: #008300;
   --cat-etc: #898781;
 
   --radius: 12px;
@@ -63,11 +63,11 @@
     --accent-context: #184f95;
     --accent-ink: #ffffff;
 
-    --cat-skincare: #d95926;
-    --cat-makeup: #199e70;
-    --cat-hair: #c98500;
-    --cat-body: #d55181;
-    --cat-inner: #008300;
+    --cat-ampoule: #d95926;
+    --cat-cleanser: #199e70;
+    --cat-cream: #c98500;
+    --cat-toner: #d55181;
+    --cat-body: #008300;
   }
 }
 
@@ -91,11 +91,11 @@
   --accent-context: #184f95;
   --accent-ink: #ffffff;
 
-  --cat-skincare: #d95926;
-  --cat-makeup: #199e70;
-  --cat-hair: #c98500;
-  --cat-body: #d55181;
-  --cat-inner: #008300;
+  --cat-ampoule: #d95926;
+  --cat-cleanser: #199e70;
+  --cat-cream: #c98500;
+  --cat-toner: #d55181;
+  --cat-body: #008300;
 }
 
 /* ---------- 기본 ---------- */
@@ -384,11 +384,27 @@ a { color: var(--accent); }
   background: var(--cat-etc);
   flex: none;
 }
-.chip--cat-skincare::before { background: var(--cat-skincare); }
-.chip--cat-makeup::before { background: var(--cat-makeup); }
-.chip--cat-hair::before { background: var(--cat-hair); }
+.chip--cat-ampoule::before { background: var(--cat-ampoule); }
+.chip--cat-cleanser::before { background: var(--cat-cleanser); }
+.chip--cat-cream::before { background: var(--cat-cream); }
+.chip--cat-toner::before { background: var(--cat-toner); }
 .chip--cat-body::before { background: var(--cat-body); }
-.chip--cat-inner::before { background: var(--cat-inner); }
+
+/* 피부효능 칩 — 카테고리 칩과 생김새로 구분되게 테두리형으로 둔다 */
+.chip--eff {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+/* 진행 상태 — 색만으로 읽지 않도록 글자가 항상 함께 간다 */
+.chip--status-develop { color: var(--good); }
+.chip--status-hold { color: var(--muted); }
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.8125rem;
+}
 
 .kind {
   font-size: 0.75rem;

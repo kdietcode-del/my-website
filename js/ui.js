@@ -35,6 +35,16 @@ const UI = (() => {
     return found ? found.label : "미분류";
   }
 
+  function efficacyLabel(key) {
+    const found = EFFICACIES.find((e) => e.key === key);
+    return found ? found.label : "";
+  }
+
+  function statusLabel(key) {
+    const found = STATUSES.find((s) => s.key === (key || ""));
+    return found ? found.label : "";
+  }
+
   function stageMeta(key) {
     return STAGE_TEMPLATE.find((s) => s.key === key) || { key, name: key, desc: "", tasks: [] };
   }
@@ -80,7 +90,7 @@ const UI = (() => {
     );
   }
 
-  /* 9단계를 한 줄로 압축해 보여주는 미니 지표. 각 칸이 그 단계의 진행률이다. */
+  /* 8단계를 한 줄로 압축해 보여주는 미니 지표. 각 칸이 그 단계의 진행률이다. */
   function stageStrip(product) {
     const cells = product.stages
       .map((stage) => {
@@ -357,6 +367,8 @@ const UI = (() => {
     escapeHtml,
     safeUrl,
     categoryLabel,
+    efficacyLabel,
+    statusLabel,
     stageMeta,
     formatPrice,
     formatDate,

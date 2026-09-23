@@ -4,12 +4,17 @@
 
 const STORAGE_KEY = "beauty-launch-board.v1";
 
+/* 아이디어 덤프 기본 목록의 판 번호. 올리면 이미 쓰고 있는 브라우저에도
+   새 목록이 한 번 들어간다 (사용자가 직접 쓴 항목은 그대로 둔다). */
+const SEED_VERSION = 2;
+
 const Store = (() => {
   let state = {
     ideas: [],
     products: [],
     competitors: [],
     seeded: false,
+    seedVersion: 0,
   };
 
   /* ---------- 유틸 ---------- */
@@ -54,6 +59,7 @@ const Store = (() => {
         const parsed = JSON.parse(raw);
         state = Object.assign(state, parsed);
         normalize();
+        applySeedUpdate();
         return;
       } catch (e) {
         console.warn("저장된 데이터가 손상되어 샘플로 시작합니다.", e);
@@ -62,11 +68,35 @@ const Store = (() => {
     seed();
   }
 
+  /* 예전 분류로 저장돼 있으면 새 분류로 바꾼다. 대응되는 게 없으면 비워서
+     사용자가 다시 고르게 한다 — 엉뚱한 값을 넣는 것보다 낫다. */
+  function migrateCategory(key) {
+    if (!key) return "";
+    if (CATEGORIES.some((c) => c.key === key)) return key;
+    return Object.prototype.hasOwnProperty.call(LEGACY_CATEGORY_MAP, key)
+      ? LEGACY_CATEGORY_MAP[key]
+      : "";
+  }
+
   /* 저장된 데이터가 구버전이어도 화면이 깨지지 않도록 빠진 값을 채운다. */
   function normalize() {
-    state.ideas = (state.ideas || []).map((i) =>
-      Object.assign({ id: uid(), kind: "idea", tags: [], refs: [], createdAt: nowISO() }, i)
-    );
+    state.ideas = (state.ideas || []).map((i) => {
+      const idea = Object.assign(
+        {
+          id: uid(),
+          kind: "idea",
+          tags: [],
+          refs: [],
+          efficacyType: "",
+          ingredients: "",
+          status: "",
+          createdAt: nowISO(),
+        },
+        i
+      );
+      idea.category = migrateCategory(idea.category);
+      return idea;
+    });
     state.products = (state.products || []).map((p) => {
       const product = Object.assign(
         {
@@ -77,9 +107,11 @@ const Store = (() => {
           owner: "",
           targetDate: "",
           targetPrice: null,
+          efficacyType: "",
         },
         p
       );
+      product.category = migrateCategory(product.category);
       const previous = product.stages || [];
       product.stages = STAGE_TEMPLATE.map((tpl) => {
         const existing = previous.find((s) => s.key === tpl.key);
@@ -110,10 +142,24 @@ const Store = (() => {
     });
   }
 
+  /* 아이디어 덤프 기본 목록. 샘플이 아니라 실제 데이터라 sample 표시를 달지 않는다. */
+  function seedIdeas() {
+    return SEED.ideas.map((i) => Object.assign({ id: uid(), createdAt: nowISO() }, i));
+  }
+
+  /* 이미 쓰고 있던 브라우저에 새 기본 목록을 한 번만 채워 넣는다.
+     직접 쓴 아이디어는 남기고, 예전 샘플만 걷어낸다. */
+  function applySeedUpdate() {
+    if (state.seedVersion === SEED_VERSION) return;
+    const own = (state.ideas || []).filter((i) => !i.sample);
+    state.ideas = seedIdeas().concat(own);
+    state.seedVersion = SEED_VERSION;
+    save();
+  }
+
   function seed() {
-    state.ideas = SEED.ideas.map((i) =>
-      Object.assign({ id: uid(), createdAt: nowISO(), sample: true }, i)
-    );
+    state.ideas = seedIdeas();
+    state.seedVersion = SEED_VERSION;
     state.products = SEED.products.map((p) => {
       const rest = Object.assign({}, p);
       const doneUpTo = rest.doneUpTo || 0;

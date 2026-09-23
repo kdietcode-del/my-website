@@ -1,5 +1,5 @@
 /* ============================================================
-   2) 런칭 상황판 — 9단계를 카테고리로 묶고 단계별 진행률을 보여준다
+   2) 런칭 상황판 — 8단계를 카테고리로 묶고 단계별 진행률을 보여준다
    ============================================================ */
 
 const Pipeline = (() => {
@@ -19,10 +19,20 @@ const Pipeline = (() => {
     return [
       { name: "name", label: "제품명", type: "text", required: true, span: 2 },
       {
+        name: "efficacyType",
+        label: "피부효능",
+        type: "select",
+        options: [{ value: "", label: "선택 안 함" }].concat(
+          EFFICACIES.map((e) => ({ value: e.key, label: e.label }))
+        ),
+      },
+      {
         name: "category",
         label: "카테고리",
         type: "select",
-        options: CATEGORIES.map((c) => ({ value: c.key, label: c.label })),
+        options: [{ value: "", label: "선택 안 함" }].concat(
+          CATEGORIES.map((c) => ({ value: c.key, label: c.label }))
+        ),
       },
       { name: "owner", label: "담당자", type: "text", placeholder: "이름" },
       { name: "targetDate", label: "목표 런칭일", type: "date" },
@@ -43,8 +53,8 @@ const Pipeline = (() => {
     UI.openForm({
       title: "런칭 제품 추가",
       fields: productFields(),
-      values: { category: "skincare" },
-      submitLabel: "9단계 상황판 만들기",
+      values: { category: "", efficacyType: "" },
+      submitLabel: "8단계 상황판 만들기",
       onSubmit: (data) => {
         const product = Store.addProduct(data);
         UI.toast("상황판을 만들었습니다.");
@@ -74,7 +84,7 @@ const Pipeline = (() => {
     const product = Store.getProduct(id);
     if (!product) return;
     UI.confirmAction(
-      '"' + product.name + '" 의 상황판을 지울까요? 9단계 진행 기록이 함께 사라집니다.',
+      '"' + product.name + '" 의 상황판을 지울까요? 8단계 진행 기록이 함께 사라집니다.',
       () => {
         Store.removeProduct(id);
         setActive(null);
@@ -100,7 +110,15 @@ const Pipeline = (() => {
       '<article class="card product-card" data-id="' + product.id + '" tabindex="0" role="button" ' +
       'aria-label="' + UI.escapeHtml(product.name) + ' 상황판 열기">' +
       '<header class="card__head">' +
-      UI.chip(UI.categoryLabel(product.category), "chip--cat chip--cat-" + UI.escapeHtml(product.category || "etc")) +
+      (UI.efficacyLabel(product.efficacyType)
+        ? UI.chip(UI.efficacyLabel(product.efficacyType), "chip--eff")
+        : "") +
+      (product.category
+        ? UI.chip(
+            UI.categoryLabel(product.category),
+            "chip--cat chip--cat-" + UI.escapeHtml(product.category)
+          )
+        : "") +
       ddayHtml +
       (product.sample ? '<span class="chip chip--sample">샘플</span>' : "") +
       "</header>" +
@@ -251,7 +269,7 @@ const Pipeline = (() => {
     );
   }
 
-  /* 9단계는 접히는 목록이 아니라 각각 독립된 블록으로 항상 펼쳐 둔다. */
+  /* 8단계는 접히는 목록이 아니라 각각 독립된 블록으로 항상 펼쳐 둔다. */
   function stageHtml(product, stage) {
     const ratio = Store.stageProgress(stage);
     const status = UI.statusOf(ratio);
@@ -270,7 +288,11 @@ const Pipeline = (() => {
       '<button type="button" class="btn btn--ghost btn--sm" data-act="back">← 전체 제품</button>' +
       "<h2>" + UI.escapeHtml(product.name) + "</h2>" +
       '<p class="view__sub">' +
-      UI.escapeHtml(UI.categoryLabel(product.category)) +
+      UI.escapeHtml(
+        [UI.efficacyLabel(product.efficacyType), UI.categoryLabel(product.category)]
+          .filter(Boolean)
+          .join(" · ")
+      ) +
       (product.memo ? " · " + UI.escapeHtml(product.memo) : "") +
       "</p>" +
       "</div>" +
@@ -345,7 +367,7 @@ const Pipeline = (() => {
       '<div class="view__head">' +
       "<div>" +
       "<h2>런칭 상황판</h2>" +
-      '<p class="view__sub">제품마다 기획부터 생산까지 9단계를 따라갑니다. 진행률은 체크한 할 일 수에서 자동으로 계산됩니다.</p>' +
+      '<p class="view__sub">제품마다 기획부터 생산까지 8단계를 따라갑니다. 진행률은 체크한 할 일 수에서 자동으로 계산됩니다.</p>' +
       "</div>" +
       '<button type="button" class="btn btn--primary" data-act="create">+ 제품 추가</button>' +
       "</div>" +

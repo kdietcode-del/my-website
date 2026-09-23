@@ -1,17 +1,44 @@
 /* ============================================================
-   도메인 데이터 — 카테고리, 런칭 단계 정의, 샘플 데이터
+   도메인 데이터 — 분류 기준, 런칭 단계 정의, 초기 데이터
    ============================================================ */
 
+/* 제형 기준 분류 */
 const CATEGORIES = [
-  { key: "skincare", label: "스킨케어" },
-  { key: "makeup", label: "메이크업" },
-  { key: "hair", label: "헤어" },
+  { key: "ampoule", label: "앰플" },
+  { key: "cleanser", label: "클렌저" },
+  { key: "cream", label: "크림" },
+  { key: "toner", label: "토너" },
   { key: "body", label: "바디" },
-  { key: "inner", label: "이너뷰티" },
-  { key: "etc", label: "기타" },
 ];
 
-/* 런칭에 필요한 9단계. 각 단계는 기본 체크리스트를 가지며,
+/* 피부 고민 기준 분류 */
+const EFFICACIES = [
+  { key: "brightening", label: "미백" },
+  { key: "firming", label: "탄력" },
+  { key: "pore", label: "모공" },
+  { key: "texture", label: "결" },
+  { key: "trouble", label: "트러블" },
+];
+
+/* 아이디어가 지금 어디까지 왔는지 */
+const STATUSES = [
+  { key: "", label: "미정" },
+  { key: "hold", label: "보류" },
+  { key: "develop", label: "개발 진행" },
+];
+
+/* 예전 분류(스킨케어·메이크업 등)로 저장된 데이터를 위한 대응표.
+   제형이 분명한 '바디'만 그대로 이어지고, 나머지는 다시 고르도록 비워 둔다. */
+const LEGACY_CATEGORY_MAP = {
+  body: "body",
+  skincare: "",
+  makeup: "",
+  hair: "",
+  inner: "",
+  etc: "",
+};
+
+/* 런칭에 필요한 8단계. 각 단계는 기본 체크리스트를 가지며,
    체크된 비율이 그대로 해당 단계의 진행률이 된다. */
 const STAGE_TEMPLATE = [
   {
@@ -43,7 +70,7 @@ const STAGE_TEMPLATE = [
   {
     key: "formula",
     name: "제형 확정",
-    desc: "실제 바르는 물건의 사용감과 성분을 못 박는 단계",
+    desc: "사용감과 전성분을 못 박고 상용화 가능한지 검증하는 단계",
     tasks: [
       "1차 샘플 수령 및 평가",
       "사용감 · 향 · 텍스처 피드백 정리",
@@ -64,19 +91,6 @@ const STAGE_TEMPLATE = [
       "임상 진행",
       "결과 리포트 수령",
       "표시광고 실증자료 확보",
-    ],
-  },
-  {
-    key: "validation",
-    name: "상용화 테스트",
-    desc: "팔아도 되는 물건인지 법적 · 품질로 검증하는 단계",
-    tasks: [
-      "안정성 시험 (고온 · 저온 · 광)",
-      "미생물 한도 시험",
-      "용기 낙하 · 누액 테스트",
-      "화장품 책임판매업 등록 확인",
-      "전성분 표시사항 검수",
-      "파일럿 생산 승인",
     ],
   },
   {
@@ -133,38 +147,142 @@ const STAGE_TEMPLATE = [
   },
 ];
 
-/* 처음 열었을 때 빈 화면 대신 보여줄 예시. 헤더의 '샘플 지우기'로 삭제 가능. */
+/* 아이디어 덤프 초기 내용 — 구글 스프레드시트 '뷰티 제품 아이디어 리스트' 를 옮긴 것.
+   샘플이 아니라 실제 데이터라 '샘플 지우기' 로 지워지지 않는다. */
 const SEED = {
   ideas: [
     {
       kind: "idea",
-      name: "무화과 시카 진정 앰플",
-      category: "skincare",
-      efficacy: "진정, 장벽 강화. 시술 직후나 트러블 올라온 피부에 3일 집중 케어.",
-      usp: "시카 성분에 무화과 추출물을 붙여 '약 냄새 안 나는 진정템'으로 차별화. 끈적임 없이 흡수되는 워터 앰플 제형.",
-      tags: ["진정", "민감성", "앰플"],
+      name: "Advanced Dark Spot Ampoule — Tone Recovery Complex",
+      category: "ampoule",
+      efficacyType: "brightening",
+      efficacy: "잡티 색소침착 흔적을 깨끗하게 없애는 스포이드 앰플",
+      ingredients:
+        "Niancinamide 5% / Alpha-albutin 2% / 3-O-Ethyl Ascorbic Acid 1% / Cica-Panthenol 20,000ppm",
+      usp: "매일 앰플 바르는 것을 속도감 있게 보여주고, 잡티가 연해지는 것",
+      tags: ["잡티흔적"],
       refs: [
-        { label: "라운드랩 자작나무 수분 앰플", url: "" },
+        { label: "기능 참고 — Teashell 앰플", url: "" },
+        { label: "디자인 참고 — 에스티로더 갈색병 + Teashell 앰플", url: "" },
       ],
-      memo: "성수동 팝업에서 반응 봤던 컨셉. 향이 승부처.",
+      status: "develop",
+      memo: "레몬타치온 다크 스팟 앰플로 진행중",
     },
     {
-      kind: "reference",
-      name: "타사 — 비건 립 슬리핑 마스크",
-      category: "makeup",
-      efficacy: "야간 입술 보습, 각질 정돈",
-      usp: "동물성 원료 0%에 용기까지 재생 플라스틱. 가격대는 2만원 초반인데 선물 수요가 큼.",
-      tags: ["비건", "립케어", "선물"],
+      kind: "idea",
+      name: "Lemo-Toning Double Capsule Serum",
+      category: "ampoule",
+      efficacyType: "brightening",
+      efficacy: "두 가지 미백 캡슐로 흔적부터 톤업까지 잡는 미백 세럼",
+      ingredients:
+        "VITA C + LEMON COMPLEX™ 7% / NIACINAMIDE 5% / TRANEXAMIC ACID 1% / CICA-PANTHENOL 10,000ppm",
+      usp:
+        "2가지 색의 캡슐이 얼굴 위에서 으깨지며 펴바르면 자연스러운 톤업이 되는 모습, " +
+        "그리고 하루하루 바르면서 점점 환해지는 얼굴",
+      tags: ["톤업미백"],
+      refs: [],
+      status: "hold",
+      memo: "",
+    },
+    {
+      kind: "idea",
+      name: "Wash-off Body Treatment",
+      category: "body",
+      efficacyType: "texture",
+      efficacy:
+        "바디워시 후 샤워 중에 바른 다음 씻어내면 보습이 완료되는, 바디로션이 필요 없는 바디 트리트먼트",
+      ingredients: "계면활성제 없는 보습 성분",
+      usp: "",
+      tags: ["바디"],
+      refs: [{ label: "닥터포포 올인원 워시 & 컨디셔너", url: "" }],
+      status: "hold",
+      memo: "",
+    },
+    {
+      kind: "idea",
+      name: "Air Bubble Body Lotion",
+      category: "body",
+      efficacyType: "firming",
+      efficacy:
+        "공기처럼 가벼운 버블 폼이 피부에 닿는 순간 부드럽게 녹아드는 바디로션. " +
+        "기존 바디크림 특유의 미끄러움과 유분감을 최소화하고, 쿨링감을 더해 붓고 지친 듯한 " +
+        "바디 피부를 산뜻하게 관리하는 데일리 바디 탄력 케어.",
+      ingredients: "멘톨 또는 쿨링 성분 / 히알루론산 / 나이아신아마이드 / PDRN 등",
+      usp:
+        "에어버블 제형이라 적은 롤링으로 빠르고 가볍게 흡수되고 마무리가 산뜻함. " +
+        "셀룰라이트 완화 · 피부 탄력 개선 · 피부 진정.",
+      tags: ["바디"],
       refs: [
-        { label: "올리브영 립 슬리핑 마스크 카테고리", url: "https://www.oliveyoung.co.kr" },
+        { label: "신신제약 레그핏 에어버블 (다리 붓기 꿀템)", url: "" },
+        { label: "가쉬 에어버블팩", url: "" },
       ],
-      memo: "우리가 한다면 '향 3종 세트'로 묶어서 가격 방어 가능할 듯.",
+      status: "",
+      memo: "",
+    },
+    {
+      kind: "idea",
+      name: "PORE OUT BHA BALM",
+      category: "cream",
+      efficacyType: "pore",
+      efficacy:
+        "피지 연화 밤. 세안 후 코 옆 등 피지 많은 부위에 발라주면 체온에 녹으며 피지를 열어주고, " +
+        "롤링하면 피지가 뽑혀 나오는 제품.",
+      ingredients: "",
+      usp: "",
+      tags: ["피지 요철"],
+      refs: [],
+      status: "",
+      memo: "보통 클렌징 오일로 관리하라고 하는데, 클렌징 오일은 호불호가 있어서.",
+    },
+    {
+      kind: "idea",
+      name: "POST-TROUBLE RECOVERY GEL",
+      category: "cream",
+      efficacyType: "trouble",
+      efficacy: "트러블 애프터 케어 제품. 압출 후 흉터가 남지 않도록 하는 진정 재생 겔.",
+      ingredients: "",
+      usp: "",
+      tags: ["트러블진정"],
+      refs: [],
+      status: "",
+      memo: "'재생' 이라는 단어를 쓸 수 없어서 워딩 개발이 필요함.",
+    },
+    {
+      kind: "idea",
+      name: "Lemon-Tathione Dark Spot Cream",
+      category: "cream",
+      efficacyType: "brightening",
+      efficacy: "",
+      ingredients: "",
+      usp: "",
+      tags: ["잡티흔적"],
+      refs: [],
+      status: "",
+      memo: "",
+    },
+    {
+      kind: "idea",
+      name: "Lemo-Toning Gel Patch Mask",
+      category: "",
+      efficacyType: "brightening",
+      efficacy:
+        "열감 완화 + 피부 진정 + 피부 톤업 + 모공 탄력 패치(겔 마스크). " +
+        "떼어내자마자 즉각적으로 안색이 맑아지는 제품.",
+      ingredients: "미네랄 워터, 카라기난, 피브이비, 알지네이트 콤플렉스",
+      usp: "",
+      tags: ["톤업미백"],
+      refs: [
+        { label: "디자인 참고 — 릴스", url: "" },
+        { label: "스킨시딘 멀티 토닝 마스크 — 아쿠아겔 멸균 마스크", url: "" },
+      ],
+      status: "",
+      memo: "",
     },
   ],
   products: [
     {
       name: "무화과 시카 진정 앰플 30ml",
-      category: "skincare",
+      category: "ampoule",
       owner: "kdietcode",
       targetDate: "",
       targetPrice: 32000,
