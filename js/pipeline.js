@@ -1,5 +1,5 @@
 /* ============================================================
-   2) 런칭 상황판 — 8단계를 카테고리로 묶고 단계별 진행률을 보여준다
+   2) 제품 런칭 상황보드 — 8단계를 카테고리로 묶고 단계별 진행률을 보여준다
    ============================================================ */
 
 const Pipeline = (() => {
@@ -54,10 +54,10 @@ const Pipeline = (() => {
       title: "런칭 제품 추가",
       fields: productFields(),
       values: { category: "", efficacyType: "" },
-      submitLabel: "8단계 상황판 만들기",
+      submitLabel: "8단계 보드 만들기",
       onSubmit: (data) => {
         const product = Store.addProduct(data);
-        UI.toast("상황판을 만들었습니다.");
+        UI.toast("보드를 만들었습니다.");
         setActive(product.id);
         App.render();
       },
@@ -84,7 +84,7 @@ const Pipeline = (() => {
     const product = Store.getProduct(id);
     if (!product) return;
     UI.confirmAction(
-      '"' + product.name + '" 의 상황판을 지울까요? 8단계 진행 기록이 함께 사라집니다.',
+      '"' + product.name + '" 의 보드를 지울까요? 8단계 진행 기록이 함께 사라집니다.',
       () => {
         Store.removeProduct(id);
         setActive(null);
@@ -108,7 +108,7 @@ const Pipeline = (() => {
 
     return (
       '<article class="card product-card" data-id="' + product.id + '" tabindex="0" role="button" ' +
-      'aria-label="' + UI.escapeHtml(product.name) + ' 상황판 열기">' +
+      'aria-label="' + UI.escapeHtml(product.name) + ' 보드 열기">' +
       '<header class="card__head">' +
       (UI.efficacyLabel(product.efficacyType)
         ? UI.chip(UI.efficacyLabel(product.efficacyType), "chip--eff")
@@ -366,7 +366,7 @@ const Pipeline = (() => {
     root.innerHTML =
       '<div class="view__head">' +
       "<div>" +
-      "<h2>런칭 상황판</h2>" +
+      "<h2>제품 런칭 상황보드</h2>" +
       '<p class="view__sub">제품마다 기획부터 생산까지 8단계를 따라갑니다. 진행률은 체크한 할 일 수에서 자동으로 계산됩니다.</p>' +
       "</div>" +
       '<button type="button" class="btn btn--primary" data-act="create">+ 제품 추가</button>' +

@@ -7,7 +7,7 @@ const App = (() => {
 
   const TABS = [
     { key: "ideas", label: "아이디어 덤프", view: () => Ideas },
-    { key: "pipeline", label: "런칭 상황판", view: () => Pipeline },
+    { key: "pipeline", label: "제품 런칭 상황보드", view: () => Pipeline },
     { key: "competitors", label: "경쟁 제품 리서치", view: () => Competitors },
   ];
 
@@ -87,7 +87,7 @@ const App = (() => {
     const link = document.createElement("a");
     const stamp = new Date().toISOString().slice(0, 10);
     link.href = url;
-    link.download = "런칭상황판-백업-" + stamp + ".json";
+    link.download = "런칭상황보드-백업-" + stamp + ".json";
     document.body.appendChild(link);
     link.click();
     link.remove();

@@ -131,7 +131,7 @@ const Ideas = (() => {
     });
   }
 
-  /* 아이디어를 런칭 상황판으로 넘긴다. 8단계 체크리스트가 함께 생성된다. */
+  /* 아이디어를 제품 런칭 상황보드로 넘긴다. 8단계 체크리스트가 함께 생성된다. */
   function promote(id) {
     const idea = Store.state.ideas.find((i) => i.id === id);
     if (!idea) return;
@@ -180,10 +180,10 @@ const Ideas = (() => {
         efficacyType: idea.efficacyType,
         memo: [idea.usp, idea.ingredients, idea.memo].filter(Boolean).join("\n\n"),
       },
-      submitLabel: "8단계 상황판 만들기",
+      submitLabel: "8단계 보드 만들기",
       onSubmit: (data) => {
         const product = Store.addProduct(Object.assign({ fromIdeaId: id }, data));
-        UI.toast("런칭 상황판에 추가했습니다. 8단계 체크리스트가 준비됐어요.");
+        UI.toast("제품 런칭 상황보드에 추가했습니다. 8단계 체크리스트가 준비됐어요.");
         App.go("pipeline", product.id);
       },
     });

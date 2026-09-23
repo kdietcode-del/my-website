@@ -19,7 +19,7 @@ const Competitors = (() => {
         type: "select",
         options: productOptions(false),
         span: 2,
-        hint: "런칭 상황판에 있는 제품과 연결하면 제품별로 묶어서 볼 수 있습니다.",
+        hint: "제품 런칭 상황보드에 있는 제품과 연결하면 제품별로 묶어서 볼 수 있습니다.",
       },
       { name: "brand", label: "브랜드", type: "text", required: true, placeholder: "라운드랩" },
       { name: "name", label: "제품명", type: "text", required: true, placeholder: "자작나무 수분 앰플" },
@@ -268,7 +268,7 @@ const Competitors = (() => {
         "</p><p>" +
         (products.length
           ? "'경쟁 제품 추가'로 가격 · 성분 · 소구 포인트를 쌓아 두면 상세페이지 기획할 때 그대로 씁니다."
-          : "먼저 런칭 상황판에 제품을 추가하면 제품별로 묶어서 관리할 수 있습니다.") +
+          : "먼저 제품 런칭 상황보드에 제품을 추가하면 제품별로 묶어서 관리할 수 있습니다.") +
         "</p></div>";
 
     root.innerHTML =
