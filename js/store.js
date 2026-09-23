@@ -6,7 +6,7 @@ const STORAGE_KEY = "beauty-launch-board.v1";
 
 /* 아이디어 덤프 기본 목록의 판 번호. 올리면 이미 쓰고 있는 브라우저에도
    새 목록이 한 번 들어간다 (사용자가 직접 쓴 항목은 그대로 둔다). */
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 
 const Store = (() => {
   let state = {
@@ -147,12 +147,25 @@ const Store = (() => {
     return SEED.ideas.map((i) => Object.assign({ id: uid(), createdAt: nowISO() }, i));
   }
 
-  /* 이미 쓰고 있던 브라우저에 새 기본 목록을 한 번만 채워 넣는다.
-     직접 쓴 아이디어는 남기고, 예전 샘플만 걷어낸다. */
+  /* 이미 쓰고 있던 브라우저를 새 기본 목록에 맞춘다.
+     - 예전 샘플은 걷어낸다
+     - 기본 목록 중 아직 없는 것만 넣는다 (seedId 로 판별하므로 중복되지 않는다)
+     - 이미 있는 항목의 내용은 건드리지 않는다. 직접 고친 값이 우선이다. */
   function applySeedUpdate() {
     if (state.seedVersion === SEED_VERSION) return;
-    const own = (state.ideas || []).filter((i) => !i.sample);
-    state.ideas = seedIdeas().concat(own);
+
+    let ideas = (state.ideas || []).filter((i) => !i.sample);
+    const present = new Set(ideas.map((i) => i.seedId).filter(Boolean));
+    const missing = seedIdeas().filter((i) => !present.has(i.seedId));
+    ideas = missing.concat(ideas);
+
+    /* 겔 패치 마스크는 '마스크팩' 분류가 생기기 전에 들어가 미분류로 남아 있다.
+       비어 있을 때만 채운다 — 직접 고른 값은 덮지 않는다. */
+    ideas.forEach((idea) => {
+      if (idea.seedId === "gel-patch-mask" && !idea.category) idea.category = "mask";
+    });
+
+    state.ideas = ideas;
     state.seedVersion = SEED_VERSION;
     save();
   }

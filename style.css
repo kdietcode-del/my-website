@@ -34,6 +34,7 @@
   --cat-cleanser: #1baf7a;
   --cat-cream: #eda100;
   --cat-toner: #e87ba4;
+  --cat-mask: #4a3aa7;
   --cat-body: #008300;
   --cat-etc: #898781;
 
@@ -67,6 +68,7 @@
     --cat-cleanser: #199e70;
     --cat-cream: #c98500;
     --cat-toner: #d55181;
+    --cat-mask: #9085e9;
     --cat-body: #008300;
   }
 }
@@ -95,6 +97,7 @@
   --cat-cleanser: #199e70;
   --cat-cream: #c98500;
   --cat-toner: #d55181;
+  --cat-mask: #9085e9;
   --cat-body: #008300;
 }
 
@@ -388,6 +391,7 @@ a { color: var(--accent); }
 .chip--cat-cleanser::before { background: var(--cat-cleanser); }
 .chip--cat-cream::before { background: var(--cat-cream); }
 .chip--cat-toner::before { background: var(--cat-toner); }
+.chip--cat-mask::before { background: var(--cat-mask); }
 .chip--cat-body::before { background: var(--cat-body); }
 
 /* 피부효능 칩 — 카테고리 칩과 생김새로 구분되게 테두리형으로 둔다 */
@@ -414,7 +418,6 @@ a { color: var(--accent); }
   border: 1px solid var(--border);
   color: var(--text-2);
 }
-.kind--own { background: var(--accent-track); color: var(--text); border-color: transparent; }
 .kind--ref { background: transparent; }
 
 .badge {

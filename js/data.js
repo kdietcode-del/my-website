@@ -8,6 +8,7 @@ const CATEGORIES = [
   { key: "cleanser", label: "클렌저" },
   { key: "cream", label: "크림" },
   { key: "toner", label: "토너" },
+  { key: "mask", label: "마스크팩" },
   { key: "body", label: "바디" },
 ];
 
@@ -153,6 +154,7 @@ const SEED = {
   ideas: [
     {
       kind: "idea",
+      seedId: "dark-spot-ampoule",
       name: "Advanced Dark Spot Ampoule — Tone Recovery Complex",
       category: "ampoule",
       efficacyType: "brightening",
@@ -170,6 +172,7 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "double-capsule-serum",
       name: "Lemo-Toning Double Capsule Serum",
       category: "ampoule",
       efficacyType: "brightening",
@@ -186,6 +189,7 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "wash-off-body-treatment",
       name: "Wash-off Body Treatment",
       category: "body",
       efficacyType: "texture",
@@ -200,6 +204,7 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "air-bubble-body-lotion",
       name: "Air Bubble Body Lotion",
       category: "body",
       efficacyType: "firming",
@@ -221,6 +226,7 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "pore-out-bha-balm",
       name: "PORE OUT BHA BALM",
       category: "cream",
       efficacyType: "pore",
@@ -236,6 +242,7 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "post-trouble-recovery-gel",
       name: "POST-TROUBLE RECOVERY GEL",
       category: "cream",
       efficacyType: "trouble",
@@ -249,6 +256,7 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "lemon-tathione-cream",
       name: "Lemon-Tathione Dark Spot Cream",
       category: "cream",
       efficacyType: "brightening",
@@ -262,8 +270,9 @@ const SEED = {
     },
     {
       kind: "idea",
+      seedId: "gel-patch-mask",
       name: "Lemo-Toning Gel Patch Mask",
-      category: "",
+      category: "mask",
       efficacyType: "brightening",
       efficacy:
         "열감 완화 + 피부 진정 + 피부 톤업 + 모공 탄력 패치(겔 마스크). " +

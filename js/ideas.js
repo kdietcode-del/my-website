@@ -251,25 +251,28 @@ const Ideas = (() => {
     const tags = (idea.tags || []).map((t) => UI.chip("#" + t)).join("");
     const efficacyName = UI.efficacyLabel(idea.efficacyType);
     const statusName = idea.status ? UI.statusLabel(idea.status) : "";
-    return (
-      '<article class="card idea-card" data-id="' + idea.id + '">' +
-      '<header class="card__head">' +
-      '<span class="kind kind--' + (isReference ? "ref" : "own") + '">' +
-      (isReference ? "타사 레퍼런스" : "내 아이디어") +
-      "</span>" +
-      (efficacyName ? UI.chip(efficacyName, "chip--eff") : "") +
-      (idea.category
+
+    /* 대부분이 내 아이디어라 '내 아이디어' 배지는 달지 않는다.
+       예외인 타사 레퍼런스만 표시한다. */
+    const head = [
+      isReference ? '<span class="kind kind--ref">타사 레퍼런스</span>' : "",
+      efficacyName ? UI.chip(efficacyName, "chip--eff") : "",
+      idea.category
         ? UI.chip(
             UI.categoryLabel(idea.category),
             "chip--cat chip--cat-" + UI.escapeHtml(idea.category)
           )
-        : "") +
-      (statusName
+        : "",
+      statusName
         ? '<span class="chip chip--status chip--status-' + UI.escapeHtml(idea.status) + '">' +
           UI.escapeHtml(statusName) + "</span>"
-        : "") +
-      (idea.sample ? '<span class="chip chip--sample">샘플</span>' : "") +
-      "</header>" +
+        : "",
+      idea.sample ? '<span class="chip chip--sample">샘플</span>' : "",
+    ].filter(Boolean);
+
+    return (
+      '<article class="card idea-card" data-id="' + idea.id + '">' +
+      (head.length ? '<header class="card__head">' + head.join("") + "</header>" : "") +
       '<h3 class="card__title">' + UI.escapeHtml(idea.name) + "</h3>" +
       (idea.efficacy
         ? '<div class="card__block"><h4 class="card__label">컨셉</h4><p>' +
