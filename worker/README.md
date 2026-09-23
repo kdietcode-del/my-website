@@ -29,12 +29,13 @@ https://dash.cloudflare.com/sign-up 에서 이메일로 가입합니다. 카드 
 
 ```js
 const ALLOWED_ORIGINS = [
+  "https://by.phb.kr",
   "https://kdietcode-del.github.io",
   "http://localhost:8765",
 ];
 ```
 
-나중에 `phby.kr` 같은 주소를 쓰게 되면 그 주소를 이 목록에 한 줄 더 넣어야 합니다.
+회원님 주소(`https://by.phb.kr`)는 이미 넣어 뒀습니다. 나중에 주소가 또 바뀌면 그때 한 줄 더 넣으면 됩니다.
 
 4. 오른쪽 위 **Deploy** 를 누릅니다
 
