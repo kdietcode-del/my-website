@@ -1,0 +1,344 @@
+/* ============================================================
+   1) 아이디어 덤프 — 떠오른 제품 아이디어와 타사 레퍼런스를 쌓는 판
+   ============================================================ */
+
+const Ideas = (() => {
+  const filters = { kind: "all", category: "all", query: "" };
+
+  const KIND_OPTIONS = [
+    { value: "idea", label: "내 아이디어" },
+    { value: "reference", label: "타사 레퍼런스" },
+  ];
+
+  function fieldSpec() {
+    return [
+      {
+        name: "kind",
+        label: "구분",
+        type: "radio",
+        options: KIND_OPTIONS,
+        span: 2,
+        hint: "내가 낸 아이디어인지, 참고하려고 모아둔 타사 사례인지 구분합니다.",
+      },
+      {
+        name: "name",
+        label: "제품명",
+        type: "text",
+        required: true,
+        placeholder: "예) 무화과 시카 진정 앰플",
+        span: 2,
+      },
+      {
+        name: "category",
+        label: "카테고리",
+        type: "select",
+        options: CATEGORIES.map((c) => ({ value: c.key, label: c.label })),
+      },
+      {
+        name: "tags",
+        label: "태그",
+        type: "text",
+        placeholder: "진정, 민감성, 앰플",
+        hint: "쉼표로 구분합니다.",
+      },
+      {
+        name: "efficacy",
+        label: "효능",
+        type: "textarea",
+        rows: 3,
+        span: 2,
+        placeholder: "어떤 피부 고민을 어떻게 해결하는지",
+      },
+      {
+        name: "usp",
+        label: "USP · 차별점",
+        type: "textarea",
+        rows: 3,
+        span: 2,
+        placeholder: "경쟁 제품 대신 이걸 골라야 하는 단 하나의 이유",
+      },
+      {
+        name: "refs",
+        label: "참고 레퍼런스",
+        type: "refs",
+        span: 2,
+        hint: "타사 제품, 아티클, 이미지 링크 등 근거가 되는 자료를 모아둡니다.",
+      },
+      {
+        name: "memo",
+        label: "메모",
+        type: "textarea",
+        rows: 2,
+        span: 2,
+        placeholder: "나중의 내가 알아야 할 맥락",
+      },
+    ];
+  }
+
+  function openCreate() {
+    UI.openForm({
+      title: "아이디어 추가",
+      fields: fieldSpec(),
+      values: { kind: "idea", category: "skincare" },
+      submitLabel: "판에 올리기",
+      onSubmit: (data) => {
+        Store.addIdea(data);
+        UI.toast("아이디어를 판에 올렸습니다.");
+        App.render();
+      },
+    });
+  }
+
+  function openEdit(id) {
+    const idea = Store.state.ideas.find((i) => i.id === id);
+    if (!idea) return;
+    UI.openForm({
+      title: "아이디어 수정",
+      fields: fieldSpec(),
+      values: Object.assign({}, idea, { tags: (idea.tags || []).join(", ") }),
+      submitLabel: "저장",
+      onSubmit: (data) => {
+        Store.updateIdea(id, data);
+        UI.toast("수정했습니다.");
+        App.render();
+      },
+    });
+  }
+
+  /* 아이디어를 런칭 상황판으로 넘긴다. 9단계 체크리스트가 함께 생성된다. */
+  function promote(id) {
+    const idea = Store.state.ideas.find((i) => i.id === id);
+    if (!idea) return;
+    UI.openForm({
+      title: "런칭 준비로 넘기기",
+      fields: [
+        { name: "name", label: "제품명", type: "text", required: true, span: 2 },
+        {
+          name: "category",
+          label: "카테고리",
+          type: "select",
+          options: CATEGORIES.map((c) => ({ value: c.key, label: c.label })),
+        },
+        { name: "owner", label: "담당자", type: "text", placeholder: "이름" },
+        { name: "targetDate", label: "목표 런칭일", type: "date" },
+        {
+          name: "targetPrice",
+          label: "목표 판매가",
+          type: "number",
+          min: 0,
+          step: 100,
+          placeholder: "32000",
+          hint: "경쟁 제품 가격 비교에 쓰입니다.",
+        },
+        {
+          name: "memo",
+          label: "메모",
+          type: "textarea",
+          rows: 2,
+          span: 2,
+        },
+      ],
+      values: {
+        name: idea.name,
+        category: idea.category,
+        memo: [idea.usp, idea.memo].filter(Boolean).join("\n\n"),
+      },
+      submitLabel: "9단계 상황판 만들기",
+      onSubmit: (data) => {
+        const product = Store.addProduct(Object.assign({ fromIdeaId: id }, data));
+        UI.toast("런칭 상황판에 추가했습니다. 9단계 체크리스트가 준비됐어요.");
+        App.go("pipeline", product.id);
+      },
+    });
+  }
+
+  function remove(id) {
+    const idea = Store.state.ideas.find((i) => i.id === id);
+    if (!idea) return;
+    UI.confirmAction('"' + idea.name + '" 을(를) 판에서 지울까요?', () => {
+      Store.removeIdea(id);
+      UI.toast("지웠습니다.");
+      App.render();
+    });
+  }
+
+  /* ---------- 렌더 ---------- */
+
+  function visibleIdeas() {
+    const query = filters.query.trim().toLowerCase();
+    return Store.state.ideas.filter((idea) => {
+      if (filters.kind !== "all" && idea.kind !== filters.kind) return false;
+      if (filters.category !== "all" && idea.category !== filters.category) return false;
+      if (!query) return true;
+      const haystack = [
+        idea.name,
+        idea.efficacy,
+        idea.usp,
+        idea.memo,
+        (idea.tags || []).join(" "),
+        (idea.refs || []).map((r) => r.label).join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  function refsHtml(refs) {
+    if (!refs || !refs.length) return "";
+    const items = refs
+      .map((ref) => {
+        const href = UI.safeUrl(ref.url);
+        const label = UI.escapeHtml(ref.label || ref.url);
+        if (href) {
+          return (
+            '<li><a href="' + UI.escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' +
+            label + ' <span class="link-arrow" aria-hidden="true">↗</span></a></li>'
+          );
+        }
+        return "<li>" + label + "</li>";
+      })
+      .join("");
+    return (
+      '<div class="card__block">' +
+      '<h4 class="card__label">참고 레퍼런스</h4>' +
+      '<ul class="ref-list">' + items + "</ul>" +
+      "</div>"
+    );
+  }
+
+  function cardHtml(idea) {
+    const isReference = idea.kind === "reference";
+    const tags = (idea.tags || []).map((t) => UI.chip("#" + t)).join("");
+    return (
+      '<article class="card idea-card" data-id="' + idea.id + '">' +
+      '<header class="card__head">' +
+      '<span class="kind kind--' + (isReference ? "ref" : "own") + '">' +
+      (isReference ? "타사 레퍼런스" : "내 아이디어") +
+      "</span>" +
+      UI.chip(UI.categoryLabel(idea.category), "chip--cat chip--cat-" + UI.escapeHtml(idea.category || "etc")) +
+      (idea.sample ? '<span class="chip chip--sample">샘플</span>' : "") +
+      "</header>" +
+      '<h3 class="card__title">' + UI.escapeHtml(idea.name) + "</h3>" +
+      (idea.efficacy
+        ? '<div class="card__block"><h4 class="card__label">효능</h4><p>' +
+          UI.escapeHtml(idea.efficacy) + "</p></div>"
+        : "") +
+      (idea.usp
+        ? '<div class="card__block"><h4 class="card__label">USP · 차별점</h4><p>' +
+          UI.escapeHtml(idea.usp) + "</p></div>"
+        : "") +
+      refsHtml(idea.refs) +
+      (idea.memo
+        ? '<div class="card__block card__block--memo"><h4 class="card__label">메모</h4><p>' +
+          UI.escapeHtml(idea.memo) + "</p></div>"
+        : "") +
+      (tags ? '<div class="chip-row">' + tags + "</div>" : "") +
+      '<footer class="card__foot">' +
+      '<button type="button" class="btn btn--sm btn--primary" data-act="promote">런칭 준비로 →</button>' +
+      '<button type="button" class="btn btn--sm btn--ghost" data-act="edit">수정</button>' +
+      '<button type="button" class="btn btn--sm btn--ghost" data-act="remove">삭제</button>' +
+      "</footer>" +
+      "</article>"
+    );
+  }
+
+  function render(root) {
+    const list = visibleIdeas();
+    const total = Store.state.ideas.length;
+    const ownCount = Store.state.ideas.filter((i) => i.kind !== "reference").length;
+    const refCount = total - ownCount;
+
+    const segments = [
+      { key: "all", label: "전체 " + total },
+      { key: "idea", label: "내 아이디어 " + ownCount },
+      { key: "reference", label: "타사 레퍼런스 " + refCount },
+    ]
+      .map(
+        (seg) =>
+          '<button type="button" class="seg' + (filters.kind === seg.key ? " seg--on" : "") +
+          '" data-kind="' + seg.key + '">' + UI.escapeHtml(seg.label) + "</button>"
+      )
+      .join("");
+
+    const categoryOptions =
+      '<option value="all">카테고리 전체</option>' +
+      CATEGORIES.map(
+        (c) =>
+          '<option value="' + c.key + '"' + (filters.category === c.key ? " selected" : "") + ">" +
+          UI.escapeHtml(c.label) + "</option>"
+      ).join("");
+
+    root.innerHTML =
+      '<div class="view__head">' +
+      "<div>" +
+      "<h2>아이디어 덤프</h2>" +
+      '<p class="view__sub">떠오른 제품 아이디어와 참고할 타사 사례를 아무렇게나 던져 두는 판입니다. 쓸 만해지면 런칭 준비로 넘기세요.</p>' +
+      "</div>" +
+      '<button type="button" class="btn btn--primary" data-act="create">+ 아이디어 추가</button>' +
+      "</div>" +
+      '<div class="toolbar">' +
+      '<div class="segmented" role="group" aria-label="구분 필터">' + segments + "</div>" +
+      '<select class="select" data-filter-category aria-label="카테고리 필터">' + categoryOptions + "</select>" +
+      '<input type="search" class="input" data-filter-query placeholder="제품명 · 효능 · 태그 검색" value="' +
+      UI.escapeHtml(filters.query) + '" aria-label="검색">' +
+      "</div>" +
+      (list.length
+        ? '<div class="card-grid">' + list.map(cardHtml).join("") + "</div>"
+        : '<div class="empty"><p class="empty__title">' +
+          (total ? "조건에 맞는 아이디어가 없습니다." : "아직 올라온 아이디어가 없습니다.") +
+          "</p><p>" +
+          (total ? "필터를 바꿔 보세요." : "오른쪽 위 '아이디어 추가'로 첫 아이디어를 던져 보세요.") +
+          "</p></div>");
+
+    bind(root);
+  }
+
+  function bind(root) {
+    const createBtn = root.querySelector('[data-act="create"]');
+    if (createBtn) createBtn.addEventListener("click", openCreate);
+
+    root.querySelectorAll("[data-kind]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        filters.kind = btn.dataset.kind;
+        App.render();
+      });
+    });
+
+    const categorySelect = root.querySelector("[data-filter-category]");
+    if (categorySelect) {
+      categorySelect.addEventListener("change", () => {
+        filters.category = categorySelect.value;
+        App.render();
+      });
+    }
+
+    const search = root.querySelector("[data-filter-query]");
+    if (search) {
+      search.addEventListener("input", () => {
+        filters.query = search.value;
+        App.render();
+        /* 다시 그린 뒤에도 입력 위치를 유지한다. */
+        const next = document.querySelector("[data-filter-query]");
+        if (next) {
+          next.focus();
+          next.setSelectionRange(next.value.length, next.value.length);
+        }
+      });
+    }
+
+    root.querySelectorAll(".idea-card").forEach((card) => {
+      const id = card.dataset.id;
+      card.querySelectorAll("[data-act]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const action = btn.dataset.act;
+          if (action === "edit") openEdit(id);
+          if (action === "remove") remove(id);
+          if (action === "promote") promote(id);
+        });
+      });
+    });
+  }
+
+  return { render };
+})();
