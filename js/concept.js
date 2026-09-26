@@ -133,6 +133,31 @@ const Concept = (() => {
     );
   }
 
+  /* 머리에 붙는 제원 줄 — 카테고리 · 효능 · 가격 · 용량처럼 한 줄로 끝나는 값.
+     이름 칸도 입력칸이라, 다른 항목이 필요하면 그 자리에서 바꿔 쓰면 된다. */
+  function specRow(row, index) {
+    const hint = (CONCEPT_SPECS.find((s) => s.label === row.label) || {}).hint || "내용";
+    return (
+      '<div class="cspec" data-spec="' + index + '">' +
+      '<input type="text" class="cspec__label" data-sf="label" value="' +
+      UI.escapeHtml(row.label || "") + '" placeholder="항목" aria-label="항목 이름">' +
+      '<input type="text" class="cspec__value" data-sf="value" value="' +
+      UI.escapeHtml(row.value || "") + '" placeholder="' + UI.escapeHtml(hint) +
+      '" aria-label="' + UI.escapeHtml(row.label || "내용") + '">' +
+      '<button type="button" class="icon-btn" data-spec-remove aria-label="이 줄 삭제">✕</button>' +
+      "</div>"
+    );
+  }
+
+  function specsHtml(rows) {
+    return (
+      '<div class="cspecs" data-specs>' +
+      rows.map(specRow).join("") +
+      '<button type="button" class="btn btn--ghost btn--sm" data-spec-add>+ 항목 추가</button>' +
+      "</div>"
+    );
+  }
+
   /* 이미지 구역 */
   function imageZone(path, images, label) {
     const thumbs = images
@@ -169,14 +194,16 @@ const Concept = (() => {
     return (
       '<div class="cboard" data-product="' + product.id + '">' +
 
-      /* 머리 — 제품명과 한 줄 컨셉, 오른쪽에 제품 사진 */
+      /* 머리 — 왼쪽에 제품 사진, 그 옆에 제품명, 오른쪽에 한 줄 제원.
+         사진은 잘라내지 않고 통째로 보여 준다. */
       '<header class="cboard__head">' +
+      '<div class="cboard__shot">' + imageZone("images", c.images, "제품 이미지 넣기") + "</div>" +
       '<div class="cboard__title">' +
       '<p class="cboard__eyebrow">제품 컨셉보드</p>' +
       '<h2 class="cboard__name">' + UI.escapeHtml(product.name) + "</h2>" +
       textHtml("headline", c.headline, "부제 · 슬로건을 적어 보세요", "ctext--lead") +
       "</div>" +
-      '<div class="cboard__shot">' + imageZone("images", c.images, "제품 이미지 넣기") + "</div>" +
+      specsHtml(c.specs) +
       "</header>" +
 
       '<div class="cboard__grid">' +
@@ -327,6 +354,7 @@ const Concept = (() => {
     });
 
     bindTexts(root, product);
+    bindSpecs(root, product);
     bindKeywords(root, product);
     bindRivals(root, product);
     bindChecks(root, product);
@@ -349,6 +377,35 @@ const Concept = (() => {
       node.addEventListener("blur", () => {
         Store.setConcept(product.id, path, { text: node.innerText.replace(/ /g, " ").trim() });
       });
+    });
+  }
+
+  function bindSpecs(root, product) {
+    const wrap = root.querySelector("[data-specs]");
+    if (!wrap) return;
+
+    const collect = () =>
+      Array.from(wrap.querySelectorAll(".cspec"))
+        .map((row) => ({
+          label: row.querySelector('[data-sf="label"]').value.trim(),
+          value: row.querySelector('[data-sf="value"]').value.trim(),
+        }))
+        .filter((row) => row.label || row.value);
+
+    const save = () => Store.setConcept(product.id, "specs", collect());
+
+    wrap.addEventListener("change", save);
+    wrap.addEventListener("click", (event) => {
+      if (event.target.matches("[data-spec-add]")) {
+        wrap
+          .querySelector("[data-spec-add]")
+          .insertAdjacentHTML("beforebegin", specRow({ label: "", value: "" }, 0));
+        wrap.querySelector(".cspec:last-of-type [data-sf=\"label\"]").focus();
+      }
+      if (event.target.matches("[data-spec-remove]")) {
+        event.target.closest(".cspec").remove();
+        save();
+      }
     });
   }
 

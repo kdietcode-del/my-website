@@ -39,6 +39,16 @@ const CONCEPT_BLOCKS = [
   { key: "target", title: "타겟과 페인포인트", hint: "누가, 무엇 때문에 불편한가" },
 ];
 
+/* 컨셉보드 머리에 붙는 한 줄짜리 제원. 이름도 내용도 고칠 수 있고, 줄을 더
+   늘리거나 지워도 된다. 처음 열었을 때 어떤 칸인지 보이도록 기본 네 줄을
+   깔아 둔다. */
+const CONCEPT_SPECS = [
+  { label: "카테고리", hint: "앰플" },
+  { label: "효능", hint: "미백" },
+  { label: "가격", hint: "미정" },
+  { label: "용량", hint: "30ml" },
+];
+
 /* 아이디어가 지금 어디까지 왔는지 */
 const STATUSES = [
   { key: "", label: "미정" },

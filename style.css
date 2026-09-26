@@ -1012,15 +1012,18 @@ a { color: var(--accent); }
   padding: 28px;
 }
 
+/* 머리 — 사진 · 제품명 · 제원 세 칸. 사진이 왼쪽 끝에 오고, 그 옆이 이름,
+   오른쪽이 한 줄짜리 제원이다. */
 .cboard__head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 340px);
-  gap: 24px;
+  grid-template-columns: 180px minmax(0, 1fr) minmax(220px, 300px);
+  gap: 20px;
   align-items: start;
   padding-bottom: 22px;
   border-bottom: 2px solid var(--line);
   margin-bottom: 22px;
 }
+.cboard__title { align-self: center; }
 .cboard__eyebrow {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -1197,7 +1200,46 @@ a { color: var(--accent); }
 .czone__add:hover { color: var(--text); border-color: var(--accent); }
 .czone__add span { font-size: 1.1rem; line-height: 1; }
 
-.cboard__shot .czone__grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+/* 왼쪽 제품 사진 — 한 장만 크게, 잘라내지 않고 통째로 보여 준다.
+   화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다. */
+.cboard__shot .czone__grid { grid-template-columns: 1fr; gap: 6px; }
+.cboard__shot .czone__item {
+  aspect-ratio: 3 / 4;
+  background: var(--surface-2);
+}
+.cboard__shot .czone__item img { object-fit: contain; }
+.cboard__shot .czone__add { padding: 8px; font-size: 0.75rem; }
+
+/* 오른쪽 제원 — 카테고리 · 효능 · 가격 · 용량. 이름 칸도 입력칸이지만
+   글자처럼 보이게 두어, 읽을 때는 표로 읽히고 누르면 고쳐진다. */
+.cspecs { display: flex; flex-direction: column; gap: 4px; align-self: center; }
+.cspec {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 6px;
+}
+.cspec__label,
+.cspec__value {
+  font: inherit;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: none;
+  color: var(--text);
+}
+.cspec__label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.cspec__value { font-size: 0.875rem; border-bottom-color: var(--grid); border-radius: 4px 4px 0 0; }
+.cspec__label:hover, .cspec__value:hover { background: var(--surface-2); }
+.cspec__label:focus, .cspec__value:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--accent);
+}
+.cspec .icon-btn { opacity: 0; }
+.cspec:hover .icon-btn, .cspec .icon-btn:focus { opacity: 1; }
+.cspecs [data-spec-add] { align-self: flex-start; margin-top: 2px; }
 
 /* 인쇄 — 보드만 남기고 화면 장치는 뺀다 */
 @media print {
@@ -1206,11 +1248,13 @@ a { color: var(--accent); }
   .cboard { border: none; padding: 0; }
   .ctext:hover, .ctext:focus { background: none; box-shadow: none; }
   .czone__add, .img-thumb__x, .icon-btn { display: none !important; }
+  .cspec { grid-template-columns: 74px minmax(0, 1fr); }
 }
 
 @media (max-width: 900px) {
   .cboard { padding: 18px; }
-  .cboard__head { grid-template-columns: 1fr; }
+  .cboard__head { grid-template-columns: 120px minmax(0, 1fr); }
+  .cspecs { grid-column: 1 / -1; }
   .cboard__grid { grid-template-columns: 1fr; }
   .cpanel--wide, .cpanel--full { grid-column: auto; }
   .ctools { top: 84px; }

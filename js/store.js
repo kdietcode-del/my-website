@@ -133,10 +133,24 @@ const Store = (() => {
     return { text: typeof part.text === "string" ? part.text : "" };
   }
 
+  /* 컨셉보드 머리의 제원 줄. 한 번도 손대지 않은 제품이면 기본 네 줄을 깔아
+     준다. 이미 지워 놓은 제품에 다시 살려 넣지 않도록, 값이 배열이기만 하면
+     빈 배열이라도 그대로 둔다. */
+  function normalizeSpecs(value) {
+    if (Array.isArray(value)) {
+      return value.map((row) => ({
+        label: typeof (row || {}).label === "string" ? row.label : "",
+        value: typeof (row || {}).value === "string" ? row.value : "",
+      }));
+    }
+    return CONCEPT_SPECS.map((spec) => ({ label: spec.label, value: "" }));
+  }
+
   function normalizeConcept(value) {
     const c = value && typeof value === "object" ? value : {};
     const out = {
       headline: textPart(c.headline),
+      specs: normalizeSpecs(c.specs),
       images: Array.isArray(c.images) ? c.images : [],
       market: {
         main: Array.isArray(c.market && c.market.main) ? c.market.main : [],
