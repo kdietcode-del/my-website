@@ -106,26 +106,30 @@ const Concept = (() => {
     );
   }
 
-  /* 7. 경쟁제품 — 썸네일이 붙은 작은 카드. 줄로 길게 늘어놓으면 가로가
-     쓸데없이 길어지고, 정작 어떤 제품인지는 눈에 안 들어온다.
+  /* 7. 경쟁제품 — 경쟁제품 참고보드와 같은 기록을 본다. 두 군데 따로 적으면
+     같은 제품이 두 번 들어가고, 어느 쪽이 최신인지 알 수 없게 된다.
 
-     썸네일을 누르면 그 제품의 USP · 주요 성분 · 참고 영상을 적는 칸이 열린다.
-     카드에 다 펼쳐 놓으면 한눈에 훑을 수가 없어, 카드에는 이름만 두고 나머지는
-     눌렀을 때 보여 준다. */
-  function rivalCard(row, index) {
+     카드에는 이름만 두고, 썸네일을 누르면 USP · 주요 성분 · 참고 영상이
+     열린다. 더 자세한 값(가격 · 용량 · 판매 채널)은 참고보드에서 적는다. */
+  function rivalShot(row) {
+    const image = (row.images || [])[0];
+    if (!image) return '<span class="rcard__blank" aria-hidden="true">🔍</span>';
+    return image.url
+      ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
+      : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">';
+  }
+
+  function rivalCard(row) {
     const link = UI.safeUrl(row.url);
-    const shot = UI.safeUrl(row.image);
     const title = [row.brand, row.name].filter(Boolean).join(" ") || "이 경쟁제품";
-    const noted = row.usp || row.ingredients || row.video;
+    const noted = row.claims || row.ingredients || row.video;
     return (
-      '<div class="rcard" data-rcard="' + index + '">' +
+      '<div class="rcard" data-cid="' + UI.escapeHtml(row.id) + '">' +
       '<div class="rcard__shot">' +
       '<button type="button" class="rcard__open" data-rcard-open ' +
       'aria-label="' + UI.escapeHtml(title) + ' 자세히 보기" ' +
       'title="눌러서 USP · 주요 성분 · 참고 영상 적기">' +
-      (shot
-        ? '<img src="' + UI.escapeHtml(shot) + '" alt="" loading="lazy">'
-        : '<span class="rcard__blank" aria-hidden="true">🔍</span>') +
+      rivalShot(row) +
       '<span class="rcard__mark' + (noted ? " rcard__mark--on" : "") + '" aria-hidden="true">✎</span>' +
       "</button>" +
       '<button type="button" class="img-thumb__x" data-rcard-remove aria-label="이 경쟁제품 삭제">✕</button>' +
@@ -136,12 +140,6 @@ const Concept = (() => {
       UI.escapeHtml(row.name || "") + '" placeholder="제품명" aria-label="제품명">' +
       '<input type="url" class="input rcard__f" data-f="url" value="' +
       UI.escapeHtml(row.url || "") + '" placeholder="상세페이지 링크" aria-label="링크">' +
-      /* 썸네일 주소와 적어 둔 내용은 눈에 보일 필요가 없다. 값만 들고 있다가
-         저장할 때 같이 나간다. */
-      '<input type="hidden" data-f="image" value="' + UI.escapeHtml(row.image || "") + '">' +
-      '<input type="hidden" data-f="usp" value="' + UI.escapeHtml(row.usp || "") + '">' +
-      '<input type="hidden" data-f="ingredients" value="' + UI.escapeHtml(row.ingredients || "") + '">' +
-      '<input type="hidden" data-f="video" value="' + UI.escapeHtml(row.video || "") + '">' +
       (link
         ? '<a class="rcard__link" href="' + UI.escapeHtml(link) +
           '" target="_blank" rel="noopener noreferrer">상세페이지 열기 ↗</a>'
@@ -151,13 +149,10 @@ const Concept = (() => {
     );
   }
 
-  function rivalRows(rows) {
-    const list = (rows.length ? rows : [{ brand: "", name: "", url: "", image: "" }])
-      .map(rivalCard)
-      .join("");
+  function rivalRows(productId) {
     return (
       '<div class="rcards" data-rivals>' +
-      list +
+      Store.competitorsFor(productId).map(rivalCard).join("") +
       '<button type="button" class="rcard rcard--add" data-rcard-add>' +
       "<span>＋</span>경쟁제품 추가</button>" +
       "</div>"
@@ -270,7 +265,7 @@ const Concept = (() => {
         "cpanel--wide"
       ) +
 
-      panel("경쟁제품", rivalRows(c.rivals), "cpanel--wide") +
+      panel("경쟁제품", rivalRows(product.id), "cpanel--wide") +
 
       panel("상표 가능여부", checkHtml("trademark", c.trademark, "상표 가능여부")) +
       panel("비포애프터 가능여부", checkHtml("beforeAfter", c.beforeAfter, "비포애프터 가능여부")) +
@@ -546,42 +541,36 @@ const Concept = (() => {
     const wrap = root.querySelector("[data-rivals]");
     if (!wrap) return;
 
+    /* 참고보드의 어느 칸에 담기는지 그대로 쓴다. 이름만 달리 부르면 같은 값을
+       두 군데 들고 있게 된다. */
     const NOTE_FIELDS = [
-      { key: "usp", label: "USP · 차별점", hint: "이 제품이 내세우는 한 가지" },
+      { key: "claims", label: "USP · 차별점", hint: "이 제품이 내세우는 한 가지" },
       { key: "ingredients", label: "주요 성분", hint: "성분명과 함량" },
       { key: "video", label: "참고 영상", hint: "링크와, 어떤 장면이 쓸 만했는지" },
     ];
 
+    const idOf = (card) => card.dataset.cid;
+    const recordOf = (card) => Store.state.competitors.find((c) => c.id === idOf(card));
     const field = (card, name) => card.querySelector('[data-f="' + name + '"]');
 
-    const collect = () =>
-      Array.from(wrap.querySelectorAll(".rcard:not(.rcard--add)"))
-        .map((card) => {
-          const out = {};
-          card.querySelectorAll("[data-f]").forEach((f) => (out[f.dataset.f] = f.value.trim()));
-          return out;
-        })
-        .filter((row) => row.brand || row.name || row.url || row.image || row.usp || row.ingredients || row.video);
+    const saveCard = (card) => {
+      const patch = {};
+      card.querySelectorAll("[data-f]").forEach((f) => (patch[f.dataset.f] = f.value.trim()));
+      Store.updateCompetitor(idOf(card), patch);
+    };
 
-    const save = () => Store.setConcept(product.id, "rivals", collect());
-
-    /* 썸네일 주소가 바뀌면 사진도 따라 바뀌어야 한다. */
     function paintShot(card) {
-      const value = UI.safeUrl(field(card, "image").value);
+      const record = recordOf(card);
       const open = card.querySelector(".rcard__open");
       const old = open.querySelector("img, .rcard__blank");
       if (old) old.remove();
-      open.insertAdjacentHTML(
-        "afterbegin",
-        value
-          ? '<img src="' + UI.escapeHtml(value) + '" alt="" loading="lazy">'
-          : '<span class="rcard__blank" aria-hidden="true">🔍</span>'
-      );
+      open.insertAdjacentHTML("afterbegin", rivalShot(record || {}));
+      Images.hydrate(card);
     }
 
-    /* 적어 둔 내용이 있으면 썸네일 귀퉁이에 연필 표시를 켠다. */
     function paintMark(card) {
-      const any = NOTE_FIELDS.some((f) => field(card, f.key).value.trim());
+      const record = recordOf(card) || {};
+      const any = NOTE_FIELDS.some((f) => String(record[f.key] || "").trim());
       card.querySelector(".rcard__mark").classList.toggle("rcard__mark--on", any);
     }
 
@@ -598,14 +587,16 @@ const Concept = (() => {
           const name = field(card, "name");
           if (!brand.value.trim() && data.siteName) brand.value = data.siteName;
           if (!name.value.trim() && data.title) name.value = data.title;
+          saveCard(card);
           if (data.image) {
-            field(card, "image").value = data.image;
+            Store.updateCompetitor(idOf(card), {
+              images: [{ id: "url" + Date.now().toString(36), url: data.image }],
+            });
             paintShot(card);
             msg.textContent = "";
           } else {
-            msg.textContent = "이 페이지에는 대표 이미지가 없습니다.";
+            msg.textContent = "이 페이지에는 대표 이미지가 없습니다. 참고보드에서 직접 넣을 수 있습니다.";
           }
-          save();
         },
         (error) => {
           /* 네이버 스마트스토어처럼 자동 접근을 막는 곳이 있다. */
@@ -616,16 +607,17 @@ const Concept = (() => {
 
     /* 썸네일을 누르면 열리는 칸 */
     function openNotes(card) {
-      const title = [field(card, "brand").value.trim(), field(card, "name").value.trim()]
-        .filter(Boolean)
-        .join(" ") || "경쟁제품";
+      const record = recordOf(card);
+      if (!record) return;
+      const title =
+        [record.brand, record.name].filter(Boolean).join(" ") || "경쟁제품";
       const body = NOTE_FIELDS.map((f) => {
         const id = "rnote_" + f.key;
         return (
           '<div class="field field--wide">' +
           '<label for="' + id + '">' + UI.escapeHtml(f.label) + "</label>" +
           '<textarea id="' + id + '" rows="4" data-note="' + f.key + '" placeholder="' +
-          UI.escapeHtml(f.hint) + '">' + UI.escapeHtml(field(card, f.key).value) + "</textarea>" +
+          UI.escapeHtml(f.hint) + '">' + UI.escapeHtml(record[f.key] || "") + "</textarea>" +
           "</div>"
         );
       }).join("");
@@ -637,37 +629,48 @@ const Concept = (() => {
       );
       if (!node) return;
       node.querySelector("[data-note-save]").addEventListener("click", () => {
+        const patch = {};
         NOTE_FIELDS.forEach((f) => {
-          field(card, f.key).value = node.querySelector('[data-note="' + f.key + '"]').value.trim();
+          patch[f.key] = node.querySelector('[data-note="' + f.key + '"]').value.trim();
         });
+        Store.updateCompetitor(idOf(card), patch);
         paintMark(card);
-        save();
         UI.closeModal();
-        UI.toast("적어 두었습니다.");
+        UI.toast("적어 두었습니다. 경쟁제품 참고보드에서도 보입니다.");
       });
     }
 
     wrap.addEventListener("change", (event) => {
       const card = event.target.closest(".rcard");
-      if (!card) return;
+      if (!card || !card.dataset.cid) return;
+      const record = recordOf(card);
+      const needShot = !((record && record.images) || []).length;
+      saveCard(card);
       /* 링크를 새로 넣었고 아직 썸네일이 없으면 그때 가져온다. */
-      if (event.target.matches('[data-f="url"]') && !field(card, "image").value.trim()) {
-        grabShot(card);
-      }
-      save();
+      if (event.target.matches('[data-f="url"]') && needShot) grabShot(card);
     });
 
     wrap.addEventListener("click", (event) => {
       if (event.target.closest("[data-rcard-add]")) {
-        wrap
-          .querySelector("[data-rcard-add]")
-          .insertAdjacentHTML("beforebegin", rivalCard({ brand: "", name: "", url: "", image: "" }, -1));
+        const made = Store.addCompetitor({
+          productId: product.id,
+          brand: "",
+          name: "",
+          url: "",
+          images: [],
+        });
+        App.render();
+        const fresh = document.querySelector('.rcard[data-cid="' + made.id + '"] [data-f="brand"]');
+        if (fresh) fresh.focus();
         return;
       }
 
       if (event.target.matches("[data-rcard-remove]")) {
-        event.target.closest(".rcard").remove();
-        save();
+        const card = event.target.closest(".rcard");
+        UI.confirmAction("이 경쟁제품을 지웁니다. 참고보드에서도 없어집니다.", () => {
+          Store.removeCompetitor(idOf(card));
+          App.render();
+        }, "지우기");
         return;
       }
 

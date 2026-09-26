@@ -255,6 +255,72 @@ const Store = (() => {
     state.competitors = (state.competitors || []).map((c) =>
       Object.assign({ id: uid(), productId: "", rating: 0, images: [], createdAt: nowISO() }, c)
     );
+
+    mergeConceptRivals();
+  }
+
+  /* 컨셉보드에 적어 둔 경쟁제품과 경쟁제품 참고보드가 따로 놀았다. 같은 제품을
+     두 군데 적게 되니, 컨셉보드 쪽 기록을 참고보드로 옮겨 하나로 합친다.
+
+     이미 참고보드에 있는 것(링크가 같거나 브랜드·제품명이 같은 것)은 비어 있는
+     값만 채운다. 사람이 참고보드에서 더 자세히 적어 둔 값을 덮지 않는다. */
+  function sameKey(brand, name) {
+    return (String(brand || "") + String(name || "")).replace(/\s+/g, "").toUpperCase();
+  }
+
+  function mergeConceptRivals() {
+    (state.products || []).forEach((product) => {
+      const rivals = (product.concept && product.concept.rivals) || [];
+      if (!rivals.length) return;
+
+      rivals.forEach((row) => {
+        const url = String(row.url || "").trim();
+        const key = sameKey(row.brand, row.name);
+        if (!url && !key && !row.usp && !row.ingredients && !row.video) return;
+
+        const found = state.competitors.find((c) => {
+          if (c.productId !== product.id) return false;
+          if (url && String(c.url || "").trim() === url) return true;
+          return !!key && sameKey(c.brand, c.name) === key;
+        });
+
+        const image = String(row.image || "").trim();
+        const fields = {
+          brand: row.brand,
+          name: row.name,
+          url: row.url,
+          claims: row.usp,
+          ingredients: row.ingredients,
+          video: row.video,
+        };
+
+        if (found) {
+          Object.keys(fields).forEach((field) => {
+            if (fields[field] && !String(found[field] || "").trim()) found[field] = fields[field];
+          });
+          if (image && !(found.images || []).length) {
+            found.images = [{ id: "url" + uid(), url: image }];
+          }
+          return;
+        }
+
+        state.competitors.unshift(
+          Object.assign(
+            {
+              id: uid(),
+              createdAt: nowISO(),
+              productId: product.id,
+              rating: 0,
+              images: image ? [{ id: "url" + uid(), url: image }] : [],
+            },
+            fields
+          )
+        );
+      });
+
+      /* 옮겼으니 컨셉보드 쪽 사본은 비운다. 두 번 돌아도 탈이 없다. */
+      product.concept.rivals = [];
+    });
   }
 
   /* 지금 어딘가에서 쓰이고 있는 이미지 열쇠 전부.

@@ -59,6 +59,14 @@ const Competitors = (() => {
         hint: "상세페이지에서 이미지를 복사해 오거나, 이미지 주소를 붙여넣으세요.",
       },
       {
+        name: "video",
+        label: "참고 영상",
+        type: "textarea",
+        rows: 2,
+        span: 2,
+        placeholder: "링크와, 어떤 장면이 쓸 만했는지",
+      },
+      {
         name: "memo",
         label: "메모",
         type: "textarea",
@@ -190,6 +198,9 @@ const Competitors = (() => {
           "<td>" + UI.escapeHtml(c.claims || "—") + "</td>" +
           "<td>" + UI.escapeHtml(c.channel || "—") + "</td>" +
           "<td>" +
+          (c.video ? '<span class="cell-memo">' + UI.escapeHtml(c.video) + "</span>" : '<span class="muted">—</span>') +
+          "</td>" +
+          "<td>" +
           (c.memo ? '<span class="cell-memo">' + UI.escapeHtml(c.memo) + "</span>" : '<span class="muted">—</span>') +
           "</td>" +
           '<td class="actions">' +
@@ -213,7 +224,7 @@ const Competitors = (() => {
       "<thead><tr>" +
       "<th><span class=\"sr-only\">썸네일</span></th>" +
       "<th>제품</th><th class=\"num\">가격</th><th>용량</th><th>핵심 성분</th>" +
-      "<th>소구 포인트</th><th>채널</th><th>메모</th><th></th>" +
+      "<th>소구 포인트</th><th>채널</th><th>참고 영상</th><th>메모</th><th></th>" +
       "</tr></thead>" +
       "<tbody>" + rows + "</tbody>" +
       "</table>" +
