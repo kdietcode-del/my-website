@@ -4,7 +4,7 @@
 
 const STORAGE_KEY = "beauty-launch-board.v1";
 
-/* 차기 신제품 아이디어 기본 목록의 판 번호. 올리면 이미 쓰고 있는 브라우저에도
+/* 신제품 아이디어 기본 목록의 판 번호. 올리면 이미 쓰고 있는 브라우저에도
    새 목록이 한 번 들어간다 (사용자가 직접 쓴 항목은 그대로 둔다). */
 const SEED_VERSION = 3;
 
@@ -281,7 +281,7 @@ const Store = (() => {
     });
   }
 
-  /* 차기 신제품 아이디어 기본 목록. 샘플이 아니라 실제 데이터라 sample 표시를 달지 않는다. */
+  /* 신제품 아이디어 기본 목록. 샘플이 아니라 실제 데이터라 sample 표시를 달지 않는다. */
   function seedIdeas() {
     return SEED.ideas.map((i) => Object.assign({ id: uid(), createdAt: nowISO() }, i));
   }

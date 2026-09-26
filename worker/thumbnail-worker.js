@@ -98,12 +98,17 @@ function readJsonLd(html) {
   return out;
 }
 
-/* 본문에서 '28,000원' 같은 표기를 찾아 가장 흔한 값을 고른다.
-   JSON-LD 가 없을 때를 위한 보조 수단이라 확실하지 않다. */
+/* 본문에서 '28,000원' 같은 표기를 찾아 고른다. JSON-LD 도 메타 태그도 없을 때
+   쓰는 마지막 수단이라 확실하지 않다.
+
+   그냥 '가장 자주 나온 값' 으로 뽑으면 배송비에 걸린다. 3,000원 같은 금액이
+   안내 문구마다 반복돼 실제 판매가보다 많이 나오기 때문이다. 그래서 배송비로
+   보기 어려운 금액이 하나라도 있으면 그 안에서만 고른다. */
 function guessPrice(html) {
   const text = html.replace(/<[^>]+>/g, " ");
   const matches = text.match(/([0-9]{1,3}(?:,[0-9]{3})+)\s*원/g) || [];
   if (!matches.length) return "";
+
   const counts = new Map();
   matches.forEach((raw) => {
     const value = raw.replace(/[^0-9]/g, "");
@@ -112,7 +117,16 @@ function guessPrice(html) {
     counts.set(value, (counts.get(value) || 0) + 1);
   });
   if (!counts.size) return "";
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
+
+  const all = Array.from(counts.entries());
+  const SHIPPING_CEILING = 5000;
+  const real = all.filter(([value]) => Number(value) >= SHIPPING_CEILING);
+  const pool = real.length ? real : all;
+
+  /* 같은 횟수면 큰 쪽을 고른다. 할인가와 정가가 나란히 나오는 경우가 많은데,
+     둘 중 무엇이든 배송비보다는 낫다. */
+  pool.sort((a, b) => b[1] - a[1] || Number(b[0]) - Number(a[0]));
+  return pool[0][0];
 }
 
 function absolute(candidate, base) {
@@ -189,7 +203,12 @@ export default {
       ld.image || readMeta(html, "og:image") || readMeta(html, "twitter:image"),
       parsed.href
     );
-    const price = ld.price || guessPrice(html);
+    /* 가격은 믿을 만한 순서로 찾는다. 구조화 정보 → 메타 태그 → 본문 짐작. */
+    const price =
+      ld.price ||
+      readMeta(html, "product:price:amount") ||
+      readMeta(html, "og:price:amount") ||
+      guessPrice(html);
     const description = readMeta(html, "og:description") || readMeta(html, "description");
     const siteName = readMeta(html, "og:site_name") || parsed.hostname;
 

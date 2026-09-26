@@ -233,6 +233,17 @@ const Competitors = (() => {
     return sorted;
   }
 
+  /* 컨셉보드 안에 얹어 보여줄 때 쓴다. 제품이 이미 정해져 있으므로
+     제품 고르는 칸을 숨기고, 돌아가는 버튼을 붙인다. */
+  let embedded = null;
+
+  function renderEmbedded(root, productId, onBack) {
+    embedded = { productId, onBack };
+    filters.productId = productId;
+    render(root);
+    embedded = null;
+  }
+
   function render(root) {
     const products = Store.state.products;
     if (filters.productId && !Store.getProduct(filters.productId)) filters.productId = "";
@@ -279,15 +290,24 @@ const Competitors = (() => {
           : "먼저 제품 런칭 상황보드에 제품을 추가하면 제품별로 묶어서 관리할 수 있습니다.") +
         "</p></div>";
 
+    const inBoard = !!embedded;
+
     root.innerHTML =
       '<div class="view__head">' +
       "<div>" +
-      "<h2>경쟁제품 참고보드</h2>" +
-      '<p class="view__sub">런칭 준비 중인 제품별로 경쟁 상대를 모아 가격 · 성분 · 소구 포인트를 나란히 놓고 봅니다.</p>' +
+      (inBoard
+        ? '<button type="button" class="btn btn--ghost btn--sm" data-act="back">← 컨셉보드</button>'
+        : "") +
+      "<h2>🔍 경쟁제품 참고보드</h2>" +
+      '<p class="view__sub">' +
+      (inBoard && product
+        ? UI.escapeHtml(product.name) + " 의 경쟁 상대를 가격 · 성분 · 소구 포인트로 나란히 놓고 봅니다."
+        : "런칭 준비 중인 제품별로 경쟁 상대를 모아 가격 · 성분 · 소구 포인트를 나란히 놓고 봅니다.") +
+      "</p>" +
       "</div>" +
       '<button type="button" class="btn btn--primary" data-act="create">+ 경쟁 제품 추가</button>' +
       "</div>" +
-      '<div class="toolbar">' + productSelect + sortSelect + "</div>" +
+      '<div class="toolbar">' + (inBoard ? "" : productSelect) + sortSelect + "</div>" +
       (product
         ? '<p class="context-line">기준 제품 · <strong>' + UI.escapeHtml(product.name) + "</strong>" +
           (Number(product.targetPrice) > 0
@@ -297,17 +317,22 @@ const Competitors = (() => {
         : "") +
       body;
 
-    bind(root);
+    bind(root, embedded);
   }
 
-  function bind(root) {
+  function bind(root, embed) {
     root.querySelector('[data-act="create"]').addEventListener("click", openCreate);
 
+    const backBtn = root.querySelector('[data-act="back"]');
+    if (backBtn && embed) backBtn.addEventListener("click", embed.onBack);
+
     const productFilter = root.querySelector("[data-filter-product]");
-    productFilter.addEventListener("change", () => {
-      filters.productId = productFilter.value;
-      App.render();
-    });
+    if (productFilter) {
+      productFilter.addEventListener("change", () => {
+        filters.productId = productFilter.value;
+        App.render();
+      });
+    }
 
     const sortFilter = root.querySelector("[data-filter-sort]");
     sortFilter.addEventListener("change", () => {
@@ -336,5 +361,5 @@ const Competitors = (() => {
     filters.productId = productId || "";
   }
 
-  return { render, focusProduct };
+  return { render, renderEmbedded, focusProduct };
 })();

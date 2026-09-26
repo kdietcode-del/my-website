@@ -140,7 +140,7 @@ const Pipeline = (() => {
     if (!products.length) {
       return (
         '<div class="empty"><p class="empty__title">아직 런칭 준비 중인 제품이 없습니다.</p>' +
-        "<p>차기 신제품 아이디어에서 '런칭 준비로 →' 를 누르거나, 여기서 바로 추가하세요.</p></div>"
+        "<p>신제품 아이디어에서 '런칭 준비로 →' 를 누르거나, 여기서 바로 추가하세요.</p></div>"
       );
     }
 

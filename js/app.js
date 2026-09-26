@@ -28,8 +28,7 @@ const App = (() => {
   const TABS = [
     { key: "pipeline", label: "🚀 제품 런칭 상황보드", view: () => Pipeline },
     { key: "concept", label: "🎨 제품 컨셉보드", view: () => Concept },
-    { key: "competitors", label: "🔍 경쟁제품 참고보드", view: () => Competitors },
-    { key: "ideas", label: "💡 차기 신제품 아이디어", view: () => Ideas },
+    { key: "ideas", label: "💡 신제품 아이디어", view: () => Ideas },
   ];
 
   let activeTab = "pipeline";
@@ -40,7 +39,13 @@ const App = (() => {
     activeTab = tabKey;
     if (tabKey === "pipeline") Pipeline.setActive(payload || null);
     if (tabKey === "concept") Concept.setActive(payload || null);
-    if (tabKey === "competitors" && payload) Competitors.focusProduct(payload);
+    /* 경쟁제품 참고보드는 이제 컨셉보드 안에 있다. 바깥에서 부르면
+       그 제품의 컨셉보드로 보낸 뒤 참고보드를 편다. */
+    if (tabKey === "competitors") {
+      activeTab = "concept";
+      Concept.setActive(payload || null);
+      if (payload) Concept.showRivals();
+    }
     render();
   }
 

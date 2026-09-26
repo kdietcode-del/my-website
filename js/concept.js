@@ -8,9 +8,12 @@
 
 const Concept = (() => {
   let activeId = null;
+  /* "list" 제품 고르기 · "board" 컨셉보드 · "rivals" 그 제품의 경쟁제품 참고보드 */
+  let mode = "list";
 
   function setActive(id) {
     activeId = id || null;
+    mode = id ? "board" : "list";
   }
 
   function getActive() {
@@ -84,6 +87,10 @@ const Concept = (() => {
       UI.escapeHtml(row.name || "") + '" placeholder="제품명" aria-label="제품명">' +
       '<input type="url" class="input rcard__f" data-f="url" value="' +
       UI.escapeHtml(row.url || "") + '" placeholder="상세페이지 링크" aria-label="링크">' +
+      /* 네이버처럼 자동 접근을 막는 곳은 '가져오기' 가 통하지 않는다.
+         그럴 때 이미지 주소를 직접 붙여넣을 길을 열어 둔다. */
+      '<input type="url" class="input rcard__f" data-f="image" value="' +
+      UI.escapeHtml(row.image || "") + '" placeholder="이미지 주소 (직접 넣기)" aria-label="이미지 주소">' +
       '<div class="rcard__row">' +
       '<button type="button" class="btn btn--ghost btn--sm" data-rcard-fetch>썸네일 가져오기</button>' +
       (link
@@ -250,13 +257,25 @@ const Concept = (() => {
     const product = activeId ? Store.getProduct(activeId) : null;
     if (activeId && !product) activeId = null;
 
+    /* 이 제품의 경쟁제품 참고보드 — 컨셉보드 안에서 열린다 */
+    if (product && mode === "rivals") {
+      Competitors.renderEmbedded(root, product.id, () => {
+        mode = "board";
+        App.render();
+      });
+      return;
+    }
+
     if (product) {
+      const rivalCount = Store.competitorsFor(product.id).length;
       root.innerHTML =
         '<div class="view__head view__head--tight">' +
         "<div>" +
         '<button type="button" class="btn btn--ghost btn--sm" data-act="back">← 전체 제품</button>' +
         "</div>" +
         '<div class="view__actions">' +
+        '<button type="button" class="btn btn--ghost" data-act="rivals">🔍 경쟁제품 참고보드' +
+        (rivalCount ? " (" + rivalCount + ")" : "") + "</button>" +
         '<button type="button" class="btn btn--ghost" data-act="print">인쇄 · PDF</button>' +
         "</div>" +
         "</div>" +
@@ -302,6 +321,10 @@ const Concept = (() => {
       App.render();
     });
     root.querySelector('[data-act="print"]').addEventListener("click", () => window.print());
+    root.querySelector('[data-act="rivals"]').addEventListener("click", () => {
+      mode = "rivals";
+      App.render();
+    });
 
     bindTexts(root, product);
     bindKeywords(root, product);
@@ -367,25 +390,35 @@ const Concept = (() => {
     const wrap = root.querySelector("[data-rivals]");
     if (!wrap) return;
 
-    /* 화면에 놓인 카드를 그대로 읽는다. 썸네일 주소는 카드가 들고 있다. */
     const collect = () =>
       Array.from(wrap.querySelectorAll(".rcard:not(.rcard--add)"))
         .map((card) => {
-          const out = { image: card.dataset.image || "" };
+          const out = {};
           card.querySelectorAll("[data-f]").forEach((f) => (out[f.dataset.f] = f.value.trim()));
           return out;
         })
-        .filter((row) => row.brand || row.name || row.url);
+        .filter((row) => row.brand || row.name || row.url || row.image);
 
     const save = () => Store.setConcept(product.id, "rivals", collect());
 
-    /* 지금 화면의 썸네일 주소를 카드에 기억시켜 둔다. */
-    Array.from(wrap.querySelectorAll(".rcard:not(.rcard--add)")).forEach((card, index) => {
-      const saved = (Store.getConcept(product.id).rivals || [])[index];
-      card.dataset.image = (saved && saved.image) || "";
-    });
+    /* 이미지 주소를 손으로 고치면 위쪽 썸네일도 따라 바뀌어야 한다. */
+    function paintShot(card) {
+      const value = UI.safeUrl(card.querySelector('[data-f="image"]').value);
+      const shot = card.querySelector(".rcard__shot");
+      const old = shot.querySelector("img, .rcard__blank");
+      if (old) old.remove();
+      shot.insertAdjacentHTML(
+        "afterbegin",
+        value
+          ? '<img src="' + UI.escapeHtml(value) + '" alt="" loading="lazy">'
+          : '<span class="rcard__blank" aria-hidden="true">🔍</span>'
+      );
+    }
 
-    wrap.addEventListener("change", save);
+    wrap.addEventListener("change", (event) => {
+      if (event.target.matches('[data-f="image"]')) paintShot(event.target.closest(".rcard"));
+      save();
+    });
 
     wrap.addEventListener("click", (event) => {
       if (event.target.closest("[data-rcard-add]")) {
@@ -419,22 +452,21 @@ const Concept = (() => {
             if (!brand.value.trim() && data.siteName) brand.value = data.siteName;
             if (!name.value.trim() && data.title) name.value = data.title;
             if (data.image) {
-              card.dataset.image = data.image;
-              const shot = card.querySelector(".rcard__shot");
-              shot.querySelector(".rcard__blank, img")?.remove();
-              shot.insertAdjacentHTML(
-                "afterbegin",
-                '<img src="' + UI.escapeHtml(UI.safeUrl(data.image)) + '" alt="" loading="lazy">'
-              );
-              msg.textContent = "가져왔습니다.";
+              card.querySelector('[data-f="image"]').value = data.image;
+              paintShot(card);
+              msg.textContent = "가져왔습니다. 값이 맞는지 확인해 주세요.";
             } else {
-              msg.textContent = "이 페이지에는 대표 이미지가 없습니다.";
+              msg.textContent = "이 페이지에는 대표 이미지가 없습니다. 아래 칸에 직접 넣어 주세요.";
             }
             save();
           },
           (error) => {
             event.target.disabled = false;
-            msg.textContent = error.message;
+            /* 네이버 스마트스토어처럼 자동 접근을 막는 곳이 있다. 왜 안 되는지
+               알려 주고, 손으로 넣는 길을 바로 안내한다. */
+            msg.textContent =
+              error.message +
+              " 이 사이트가 막고 있다면, 상세페이지에서 사진을 우클릭 → '이미지 주소 복사' 해서 아래 칸에 넣으세요.";
           }
         );
       }
@@ -498,5 +530,9 @@ const Concept = (() => {
     });
   }
 
-  return { render, setActive, getActive };
+  function showRivals() {
+    mode = "rivals";
+  }
+
+  return { render, setActive, getActive, showRivals };
 })();
