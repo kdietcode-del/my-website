@@ -138,8 +138,175 @@ function absolute(candidate, base) {
   }
 }
 
+/* ============================================================
+   키워드 검색량 — 네이버가 공식으로 여는 두 창구를 합친다.
+
+   · 검색광고 API   지난 한 달 PC·모바일 검색수 (실제 숫자)
+   · 데이터랩 API   최근 6개월 검색 추이 (제일 높은 달을 100 으로 둔 비율)
+
+   데이터랩은 비율만 주고, 검색광고는 최근 한 달 숫자만 준다. 그래서 마지막
+   달의 비율을 그 숫자에 맞춰 놓고 나머지 달을 같은 배율로 편다. 지난 달들의
+   숫자는 어디까지나 추정이라, 화면에도 그렇게 적어 둔다.
+
+   쓰는 법:  GET https://<워커주소>/keyword?q=기미크림
+   ============================================================ */
+
+/* 검색광고 API 는 "시각.메서드.경로" 를 비밀키로 서명한 값을 요구한다. */
+async function signSearchAd(secret, message) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signed = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
+  let binary = "";
+  new Uint8Array(signed).forEach((byte) => (binary += String.fromCharCode(byte)));
+  return btoa(binary);
+}
+
+/* 검색수가 10 미만이면 숫자가 아니라 "< 10" 이라는 글자가 온다. */
+function toCount(value) {
+  if (typeof value === "number") return value;
+  const digits = String(value == null ? "" : value).replace(/[^0-9]/g, "");
+  return digits ? Number(digits) : 0;
+}
+
+function ymd(date) {
+  const pad = (n) => (n < 10 ? "0" + n : String(n));
+  return date.getUTCFullYear() + "-" + pad(date.getUTCMonth() + 1) + "-" + pad(date.getUTCDate());
+}
+
+/* 지난 한 달 검색수 */
+async function fetchSearchAd(env, word) {
+  const path = "/keywordstool";
+  const timestamp = String(Date.now());
+  const signature = await signSearchAd(env.NAVER_AD_SECRET_KEY, timestamp + ".GET." + path);
+
+  const response = await fetch(
+    "https://api.searchad.naver.com" + path +
+      "?hintKeywords=" + encodeURIComponent(word) + "&showDetail=1",
+    {
+      headers: {
+        "X-Timestamp": timestamp,
+        "X-API-KEY": env.NAVER_AD_API_KEY,
+        "X-Customer": String(env.NAVER_AD_CUSTOMER_ID),
+        "X-Signature": signature,
+        "Content-Type": "application/json; charset=UTF-8",
+      },
+    }
+  );
+  if (!response.ok) {
+    throw new Error("검색광고 API 가 " + response.status + " 를 돌려줬습니다. 열쇠 세 개를 확인해 주세요.");
+  }
+
+  const data = await response.json();
+  const list = (data && data.keywordList) || [];
+
+  /* 검색광고는 띄어쓰기를 없앤 대문자로 돌려준다. 넣은 말과 똑같은 줄을
+     먼저 찾고, 없으면 가장 가까운 첫 줄을 쓴다. */
+  const want = word.replace(/\s+/g, "").toUpperCase();
+  const hit =
+    list.find((row) => String(row.relKeyword || "").replace(/\s+/g, "").toUpperCase() === want) ||
+    list[0];
+  if (!hit) return null;
+
+  const pc = toCount(hit.monthlyPcQcCnt);
+  const mobile = toCount(hit.monthlyMobileQcCnt);
+  return { matched: hit.relKeyword || word, pc, mobile, total: pc + mobile, comp: hit.compIdx || "" };
+}
+
+/* 최근 6개월 추이 */
+async function fetchTrend(env, word) {
+  const now = new Date();
+  /* 오늘 것은 아직 안 쌓였을 수 있어 어제까지만 본다. */
+  const end = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 5, 1));
+
+  const response = await fetch("https://openapi.naver.com/v1/datalab/search", {
+    method: "POST",
+    headers: {
+      "X-Naver-Client-Id": env.NAVER_CLIENT_ID,
+      "X-Naver-Client-Secret": env.NAVER_CLIENT_SECRET,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      startDate: ymd(start),
+      endDate: ymd(end),
+      timeUnit: "month",
+      keywordGroups: [{ groupName: word, keywords: [word] }],
+    }),
+  });
+  if (!response.ok) {
+    throw new Error("데이터랩 API 가 " + response.status + " 를 돌려줬습니다. 열쇠 두 개를 확인해 주세요.");
+  }
+
+  const data = await response.json();
+  const points = (((data && data.results) || [])[0] || {}).data || [];
+  return points.map((point) => ({ period: String(point.period || "").slice(0, 7), ratio: Number(point.ratio) || 0 }));
+}
+
+async function keywordResponse(request, env, origin) {
+  const word = (new URL(request.url).searchParams.get("q") || "").trim();
+  if (!word) return json({ ok: false, error: "q 값이 없습니다." }, 400, origin);
+  if (word.length > 40) return json({ ok: false, error: "키워드가 너무 깁니다." }, 400, origin);
+
+  const hasAd = env.NAVER_AD_API_KEY && env.NAVER_AD_SECRET_KEY && env.NAVER_AD_CUSTOMER_ID;
+  const hasLab = env.NAVER_CLIENT_ID && env.NAVER_CLIENT_SECRET;
+  if (!hasAd && !hasLab) {
+    return json(
+      { ok: false, error: "네이버 열쇠가 아직 안 들어갔습니다. 워커 설정의 Variables and Secrets 를 확인해 주세요." },
+      503,
+      origin
+    );
+  }
+
+  /* 한쪽이 막혀도 다른 쪽 값은 보여 준다. */
+  const [adResult, trendResult] = await Promise.all([
+    hasAd ? fetchSearchAd(env, word).catch((e) => ({ error: e.message })) : Promise.resolve(null),
+    hasLab ? fetchTrend(env, word).catch((e) => ({ error: e.message })) : Promise.resolve(null),
+  ]);
+
+  const notes = [];
+  const volume = adResult && !adResult.error ? adResult : null;
+  if (adResult && adResult.error) notes.push(adResult.error);
+  if (hasAd && !adResult) notes.push("검색광고에 이 키워드 기록이 없습니다.");
+
+  let trend = Array.isArray(trendResult) ? trendResult : [];
+  if (trendResult && trendResult.error) notes.push(trendResult.error);
+
+  /* 비율을 지난 달 실제 숫자에 맞춰 편다. 마지막 달 비율이 0 이면 기준이
+     없으므로 숫자는 붙이지 않고 모양만 남긴다. */
+  const last = trend.length ? trend[trend.length - 1].ratio : 0;
+  if (volume && last > 0) {
+    trend = trend.map((point) => ({
+      period: point.period,
+      ratio: point.ratio,
+      count: Math.round((point.ratio / last) * volume.total),
+    }));
+  }
+
+  return json(
+    {
+      ok: true,
+      keyword: word,
+      matched: volume ? volume.matched : "",
+      pc: volume ? volume.pc : null,
+      mobile: volume ? volume.mobile : null,
+      total: volume ? volume.total : null,
+      comp: volume ? volume.comp : "",
+      trend,
+      note: notes.join(" "),
+    },
+    200,
+    origin
+  );
+}
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
 
     if (request.method === "OPTIONS") {
@@ -150,6 +317,10 @@ export default {
     }
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
       return json({ ok: false, error: "허용되지 않은 주소에서의 요청입니다." }, 403, origin);
+    }
+
+    if (new URL(request.url).pathname === "/keyword") {
+      return keywordResponse(request, env, origin);
     }
 
     const target = new URL(request.url).searchParams.get("url");

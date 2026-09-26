@@ -69,16 +69,27 @@ const Concept = (() => {
   }
 
   /* 7. 경쟁제품 — 썸네일이 붙은 작은 카드. 줄로 길게 늘어놓으면 가로가
-     쓸데없이 길어지고, 정작 어떤 제품인지는 눈에 안 들어온다. */
+     쓸데없이 길어지고, 정작 어떤 제품인지는 눈에 안 들어온다.
+
+     썸네일을 누르면 그 제품의 USP · 주요 성분 · 참고 영상을 적는 칸이 열린다.
+     카드에 다 펼쳐 놓으면 한눈에 훑을 수가 없어, 카드에는 이름만 두고 나머지는
+     눌렀을 때 보여 준다. */
   function rivalCard(row, index) {
     const link = UI.safeUrl(row.url);
     const shot = UI.safeUrl(row.image);
+    const title = [row.brand, row.name].filter(Boolean).join(" ") || "이 경쟁제품";
+    const noted = row.usp || row.ingredients || row.video;
     return (
       '<div class="rcard" data-rcard="' + index + '">' +
       '<div class="rcard__shot">' +
+      '<button type="button" class="rcard__open" data-rcard-open ' +
+      'aria-label="' + UI.escapeHtml(title) + ' 자세히 보기" ' +
+      'title="눌러서 USP · 주요 성분 · 참고 영상 적기">' +
       (shot
         ? '<img src="' + UI.escapeHtml(shot) + '" alt="" loading="lazy">'
         : '<span class="rcard__blank" aria-hidden="true">🔍</span>') +
+      '<span class="rcard__mark' + (noted ? " rcard__mark--on" : "") + '" aria-hidden="true">✎</span>' +
+      "</button>" +
       '<button type="button" class="img-thumb__x" data-rcard-remove aria-label="이 경쟁제품 삭제">✕</button>' +
       "</div>" +
       '<input type="text" class="input rcard__f" data-f="brand" value="' +
@@ -87,17 +98,16 @@ const Concept = (() => {
       UI.escapeHtml(row.name || "") + '" placeholder="제품명" aria-label="제품명">' +
       '<input type="url" class="input rcard__f" data-f="url" value="' +
       UI.escapeHtml(row.url || "") + '" placeholder="상세페이지 링크" aria-label="링크">' +
-      /* 네이버처럼 자동 접근을 막는 곳은 '가져오기' 가 통하지 않는다.
-         그럴 때 이미지 주소를 직접 붙여넣을 길을 열어 둔다. */
-      '<input type="url" class="input rcard__f" data-f="image" value="' +
-      UI.escapeHtml(row.image || "") + '" placeholder="이미지 주소 (직접 넣기)" aria-label="이미지 주소">' +
-      '<div class="rcard__row">' +
-      '<button type="button" class="btn btn--ghost btn--sm" data-rcard-fetch>썸네일 가져오기</button>' +
+      /* 썸네일 주소와 적어 둔 내용은 눈에 보일 필요가 없다. 값만 들고 있다가
+         저장할 때 같이 나간다. */
+      '<input type="hidden" data-f="image" value="' + UI.escapeHtml(row.image || "") + '">' +
+      '<input type="hidden" data-f="usp" value="' + UI.escapeHtml(row.usp || "") + '">' +
+      '<input type="hidden" data-f="ingredients" value="' + UI.escapeHtml(row.ingredients || "") + '">' +
+      '<input type="hidden" data-f="video" value="' + UI.escapeHtml(row.video || "") + '">' +
       (link
-        ? '<a class="btn btn--ghost btn--sm" href="' + UI.escapeHtml(link) +
-          '" target="_blank" rel="noopener noreferrer">열기</a>'
+        ? '<a class="rcard__link" href="' + UI.escapeHtml(link) +
+          '" target="_blank" rel="noopener noreferrer">상세페이지 열기 ↗</a>'
         : "") +
-      "</div>" +
       '<p class="rcard__msg" data-rcard-msg></p>' +
       "</div>"
     );
@@ -447,6 +457,14 @@ const Concept = (() => {
     const wrap = root.querySelector("[data-rivals]");
     if (!wrap) return;
 
+    const NOTE_FIELDS = [
+      { key: "usp", label: "USP · 차별점", hint: "이 제품이 내세우는 한 가지" },
+      { key: "ingredients", label: "주요 성분", hint: "성분명과 함량" },
+      { key: "video", label: "참고 영상", hint: "링크와, 어떤 장면이 쓸 만했는지" },
+    ];
+
+    const field = (card, name) => card.querySelector('[data-f="' + name + '"]');
+
     const collect = () =>
       Array.from(wrap.querySelectorAll(".rcard:not(.rcard--add)"))
         .map((card) => {
@@ -454,17 +472,17 @@ const Concept = (() => {
           card.querySelectorAll("[data-f]").forEach((f) => (out[f.dataset.f] = f.value.trim()));
           return out;
         })
-        .filter((row) => row.brand || row.name || row.url || row.image);
+        .filter((row) => row.brand || row.name || row.url || row.image || row.usp || row.ingredients || row.video);
 
     const save = () => Store.setConcept(product.id, "rivals", collect());
 
-    /* 이미지 주소를 손으로 고치면 위쪽 썸네일도 따라 바뀌어야 한다. */
+    /* 썸네일 주소가 바뀌면 사진도 따라 바뀌어야 한다. */
     function paintShot(card) {
-      const value = UI.safeUrl(card.querySelector('[data-f="image"]').value);
-      const shot = card.querySelector(".rcard__shot");
-      const old = shot.querySelector("img, .rcard__blank");
+      const value = UI.safeUrl(field(card, "image").value);
+      const open = card.querySelector(".rcard__open");
+      const old = open.querySelector("img, .rcard__blank");
       if (old) old.remove();
-      shot.insertAdjacentHTML(
+      open.insertAdjacentHTML(
         "afterbegin",
         value
           ? '<img src="' + UI.escapeHtml(value) + '" alt="" loading="lazy">'
@@ -472,8 +490,81 @@ const Concept = (() => {
       );
     }
 
+    /* 적어 둔 내용이 있으면 썸네일 귀퉁이에 연필 표시를 켠다. */
+    function paintMark(card) {
+      const any = NOTE_FIELDS.some((f) => field(card, f.key).value.trim());
+      card.querySelector(".rcard__mark").classList.toggle("rcard__mark--on", any);
+    }
+
+    /* 링크를 넣으면 썸네일은 알아서 가져온다. 버튼을 따로 누르게 하면
+       비어 있는 카드만 남는다. 막힌 사이트면 왜 안 됐는지 알려 준다. */
+    function grabShot(card) {
+      const url = UI.safeUrl(field(card, "url").value);
+      const msg = card.querySelector("[data-rcard-msg]");
+      if (!url) return;
+      msg.textContent = "썸네일 가져오는 중…";
+      Meta.fetchMeta(App.proxyUrl(), url).then(
+        (data) => {
+          const brand = field(card, "brand");
+          const name = field(card, "name");
+          if (!brand.value.trim() && data.siteName) brand.value = data.siteName;
+          if (!name.value.trim() && data.title) name.value = data.title;
+          if (data.image) {
+            field(card, "image").value = data.image;
+            paintShot(card);
+            msg.textContent = "";
+          } else {
+            msg.textContent = "이 페이지에는 대표 이미지가 없습니다.";
+          }
+          save();
+        },
+        (error) => {
+          /* 네이버 스마트스토어처럼 자동 접근을 막는 곳이 있다. */
+          msg.textContent = error.message;
+        }
+      );
+    }
+
+    /* 썸네일을 누르면 열리는 칸 */
+    function openNotes(card) {
+      const title = [field(card, "brand").value.trim(), field(card, "name").value.trim()]
+        .filter(Boolean)
+        .join(" ") || "경쟁제품";
+      const body = NOTE_FIELDS.map((f) => {
+        const id = "rnote_" + f.key;
+        return (
+          '<div class="field field--wide">' +
+          '<label for="' + id + '">' + UI.escapeHtml(f.label) + "</label>" +
+          '<textarea id="' + id + '" rows="4" data-note="' + f.key + '" placeholder="' +
+          UI.escapeHtml(f.hint) + '">' + UI.escapeHtml(field(card, f.key).value) + "</textarea>" +
+          "</div>"
+        );
+      }).join("");
+      const node = UI.openModal(
+        title,
+        '<div class="form-grid">' + body + "</div>",
+        '<button type="button" class="btn btn--ghost" data-close>닫기</button>' +
+          '<button type="button" class="btn btn--primary" data-note-save>저장</button>'
+      );
+      if (!node) return;
+      node.querySelector("[data-note-save]").addEventListener("click", () => {
+        NOTE_FIELDS.forEach((f) => {
+          field(card, f.key).value = node.querySelector('[data-note="' + f.key + '"]').value.trim();
+        });
+        paintMark(card);
+        save();
+        UI.closeModal();
+        UI.toast("적어 두었습니다.");
+      });
+    }
+
     wrap.addEventListener("change", (event) => {
-      if (event.target.matches('[data-f="image"]')) paintShot(event.target.closest(".rcard"));
+      const card = event.target.closest(".rcard");
+      if (!card) return;
+      /* 링크를 새로 넣었고 아직 썸네일이 없으면 그때 가져온다. */
+      if (event.target.matches('[data-f="url"]') && !field(card, "image").value.trim()) {
+        grabShot(card);
+      }
       save();
     });
 
@@ -491,42 +582,8 @@ const Concept = (() => {
         return;
       }
 
-      if (event.target.matches("[data-rcard-fetch]")) {
-        const card = event.target.closest(".rcard");
-        const msg = card.querySelector("[data-rcard-msg]");
-        const url = UI.safeUrl(card.querySelector('[data-f="url"]').value);
-        if (!url) {
-          msg.textContent = "먼저 상세페이지 링크를 넣어 주세요.";
-          return;
-        }
-        event.target.disabled = true;
-        msg.textContent = "가져오는 중…";
-        Meta.fetchMeta(App.proxyUrl(), url).then(
-          (data) => {
-            event.target.disabled = false;
-            const brand = card.querySelector('[data-f="brand"]');
-            const name = card.querySelector('[data-f="name"]');
-            if (!brand.value.trim() && data.siteName) brand.value = data.siteName;
-            if (!name.value.trim() && data.title) name.value = data.title;
-            if (data.image) {
-              card.querySelector('[data-f="image"]').value = data.image;
-              paintShot(card);
-              msg.textContent = "가져왔습니다. 값이 맞는지 확인해 주세요.";
-            } else {
-              msg.textContent = "이 페이지에는 대표 이미지가 없습니다. 아래 칸에 직접 넣어 주세요.";
-            }
-            save();
-          },
-          (error) => {
-            event.target.disabled = false;
-            /* 네이버 스마트스토어처럼 자동 접근을 막는 곳이 있다. 왜 안 되는지
-               알려 주고, 손으로 넣는 길을 바로 안내한다. */
-            msg.textContent =
-              error.message +
-              " 이 사이트가 막고 있다면, 상세페이지에서 사진을 우클릭 → '이미지 주소 복사' 해서 아래 칸에 넣으세요.";
-          }
-        );
-      }
+      const open = event.target.closest("[data-rcard-open]");
+      if (open) openNotes(open.closest(".rcard"));
     });
   }
 
