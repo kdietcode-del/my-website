@@ -221,8 +221,8 @@ const App = (() => {
         ? '<p class="settings__warn">공유 서버를 쓰는 동안에는 아래 \'비밀번호\' 설정을 쓰지 않습니다. 비밀번호는 서버에서 관리합니다.</p>'
         : "") +
 
-      '<h3 class="settings__title">썸네일 가져오기 서버</h3>' +
-      '<p class="settings__note">경쟁제품 링크에서 제품명 · 가격 · 썸네일을 자동으로 받아오려면 주소가 필요합니다. 만드는 방법은 저장소의 worker/README.md 에 있습니다.</p>' +
+      '<h3 class="settings__title">가져오기 서버</h3>' +
+      '<p class="settings__note">경쟁제품 링크에서 제품명 · 썸네일을 받아오고, 컨셉보드 시장크기 칸의 키워드 검색량을 채우는 데 쓰입니다. 만드는 방법은 저장소의 worker/README.md 에 있습니다.</p>' +
       '<div class="settings__row">' +
       '<input type="url" class="input" id="set-proxy" placeholder="https://thumbnail.계정이름.workers.dev" value="' +
       UI.escapeHtml(proxyUrl()) + '">' +

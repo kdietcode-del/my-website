@@ -11,16 +11,9 @@
 const Meta = (() => {
   const TIMEOUT_MS = 15000;
 
-  function fetchMeta(proxyBase, targetUrl) {
-    if (!proxyBase) {
-      return Promise.reject(
-        new Error("썸네일 가져오기 서버 주소가 설정되지 않았습니다. [⚙ 설정] 에서 넣어 주세요.")
-      );
-    }
-
-    const endpoint = proxyBase.replace(/\/+$/, "") + "/?url=" + encodeURIComponent(targetUrl);
-
-    /* 응답이 없을 때 하염없이 기다리지 않도록 시간 제한을 둔다. */
+  /* 중계 서버에 한 번 물어보고 답을 받아 온다. 응답이 없을 때 하염없이
+     기다리지 않도록 시간 제한을 둔다. */
+  function request(endpoint) {
     const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), TIMEOUT_MS) : null;
 
@@ -48,6 +41,24 @@ const Meta = (() => {
           throw new Error("서버에 닿지 못했습니다. 주소와 배포 상태를 확인해 주세요.");
         }
       );
+  }
+
+  function noServer() {
+    return Promise.reject(
+      new Error("가져오기 서버 주소가 설정되지 않았습니다. [⚙ 설정] 에서 넣어 주세요.")
+    );
+  }
+
+  function fetchMeta(proxyBase, targetUrl) {
+    if (!proxyBase) return noServer();
+    return request(proxyBase.replace(/\/+$/, "") + "/?url=" + encodeURIComponent(targetUrl));
+  }
+
+  /* 키워드 검색량 — 같은 서버의 /keyword 창구에 물어본다. 네이버 검색광고에서
+     지난 한 달 숫자를, 데이터랩에서 6개월 추이를 받아 합친 값이 온다. */
+  function fetchKeyword(proxyBase, word) {
+    if (!proxyBase) return noServer();
+    return request(proxyBase.replace(/\/+$/, "") + "/keyword?q=" + encodeURIComponent(word));
   }
 
   /* 가져온 값을 경쟁 제품 입력 화면에 채운다.
@@ -112,5 +123,5 @@ const Meta = (() => {
     return parts.join(" · ") + " 을(를) 채웠습니다. 값이 맞는지 확인해 주세요.";
   }
 
-  return { fetchMeta, applyToForm, describe };
+  return { fetchMeta, fetchKeyword, applyToForm, describe };
 })();

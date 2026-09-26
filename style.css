@@ -1087,9 +1087,37 @@ a { color: var(--accent); }
 
 /* 키워드 줄 */
 .krows { display: flex; flex-direction: column; gap: 6px; }
-.krow { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; gap: 6px; align-items: center; }
+.krow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto auto;
+  gap: 4px 6px;
+  align-items: center;
+}
 .krow .input { min-width: 0; max-width: none; padding: 6px 9px; }
 .krow__count { text-align: right; font-variant-numeric: tabular-nums; }
+.krow--busy { opacity: 0.6; }
+
+/* 6개월 추이 — 숫자 하나만으로는 오르는 말인지 지는 말인지 알 수 없다.
+   축도 눈금도 두지 않는다. 옆의 검색량을 읽는 데 곁들이는 모양일 뿐이다. */
+.krow__trend {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 0;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+.krow__trend:empty { display: none; }
+.spark { display: inline-flex; align-items: flex-end; gap: 2px; height: 18px; }
+.spark__bar {
+  width: 8px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+  opacity: 0.55;
+}
+.spark__bar:last-child { opacity: 1; }
+.spark__cap { align-self: center; line-height: 1.4; }
 
 /* 경쟁제품 — 썸네일 붙은 작은 카드 */
 .rcards {

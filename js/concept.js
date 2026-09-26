@@ -46,22 +46,60 @@ const Concept = (() => {
     );
   }
 
-  /* 5. 시장크기 — 키워드와 검색량을 줄로 쌓는다 */
+  /* 5. 시장크기 — 키워드와 검색량을 줄로 쌓는다.
+
+     키워드만 적고 칸을 빠져나오면 검색량은 알아서 채워진다. 네이버 검색광고가
+     주는 지난 한 달 숫자이고, 그 아래 막대는 데이터랩에서 받은 6개월 추이다.
+     지난 달들의 숫자는 비율을 지난 달 실제값에 맞춰 편 추정치다. */
+  function sparkline(trend) {
+    if (!trend || trend.length < 2) return "";
+    const top = Math.max.apply(null, trend.map((p) => p.ratio || 0));
+    if (!top) return "";
+    const bars = trend
+      .map((point) => {
+        const height = Math.max(2, Math.round(((point.ratio || 0) / top) * 18));
+        const label =
+          point.period +
+          (point.count != null ? " · " + Number(point.count).toLocaleString("ko-KR") + "회" : "");
+        return (
+          '<span class="spark__bar" style="height:' + height + 'px" title="' +
+          UI.escapeHtml(label) + '"></span>'
+        );
+      })
+      .join("");
+    const first = trend[0].period;
+    const last = trend[trend.length - 1].period;
+    return (
+      '<span class="spark" aria-label="' +
+      UI.escapeHtml(first + " 부터 " + last + " 까지 검색 추이") + '">' + bars + "</span>" +
+      '<span class="spark__cap">최근 6개월</span>'
+    );
+  }
+
+  function keywordRow(row, index, placeholder) {
+    const trend = Array.isArray(row.trend) ? row.trend : [];
+    return (
+      '<div class="krow" data-krow="' + index + '" data-trend="' +
+      UI.escapeHtml(trend.length ? JSON.stringify(trend) : "") + '">' +
+      '<input type="text" class="input krow__word" value="' + UI.escapeHtml(row.keyword || "") +
+      '" placeholder="' + UI.escapeHtml(placeholder || "키워드") + '" aria-label="키워드">' +
+      '<input type="text" class="input krow__count" value="' + UI.escapeHtml(row.count || "") +
+      '" placeholder="검색량" aria-label="검색량" inputmode="numeric">' +
+      '<button type="button" class="icon-btn" data-krow-look aria-label="검색량 다시 가져오기" ' +
+      'title="검색량 다시 가져오기">↻</button>' +
+      '<button type="button" class="icon-btn" data-krow-remove aria-label="이 줄 삭제">✕</button>' +
+      '<p class="krow__trend" data-krow-trend>' + sparkline(trend) + "</p>" +
+      "</div>"
+    );
+  }
+
   function keywordRows(path, rows, placeholder) {
     const list = (rows.length ? rows : [{ keyword: "", count: "" }])
-      .map(
-        (row, index) =>
-          '<div class="krow" data-krow="' + index + '">' +
-          '<input type="text" class="input krow__word" value="' + UI.escapeHtml(row.keyword || "") +
-          '" placeholder="' + UI.escapeHtml(placeholder) + '" aria-label="키워드">' +
-          '<input type="text" class="input krow__count" value="' + UI.escapeHtml(row.count || "") +
-          '" placeholder="검색량" aria-label="검색량" inputmode="numeric">' +
-          '<button type="button" class="icon-btn" data-krow-remove aria-label="이 줄 삭제">✕</button>' +
-          "</div>"
-      )
+      .map((row, index) => keywordRow(row, index, placeholder))
       .join("");
     return (
-      '<div class="krows" data-keywords="' + path + '">' +
+      '<div class="krows" data-keywords="' + path + '" data-hint="' +
+      UI.escapeHtml(placeholder) + '">' +
       list +
       '<button type="button" class="btn btn--ghost btn--sm" data-krow-add>+ 키워드 추가</button>' +
       "</div>"
@@ -422,28 +460,79 @@ const Concept = (() => {
   function bindKeywords(root, product) {
     root.querySelectorAll("[data-keywords]").forEach((wrap) => {
       const path = wrap.dataset.keywords;
+      const hint = wrap.dataset.hint || "키워드";
+
+      const trendOf = (row) => {
+        try {
+          return JSON.parse(row.dataset.trend || "[]");
+        } catch (e) {
+          return [];
+        }
+      };
 
       const collect = () =>
         Array.from(wrap.querySelectorAll(".krow"))
-          .map((row) => ({
-            keyword: row.querySelector(".krow__word").value.trim(),
-            count: row.querySelector(".krow__count").value.trim(),
-          }))
+          .map((row) => {
+            const out = {
+              keyword: row.querySelector(".krow__word").value.trim(),
+              count: row.querySelector(".krow__count").value.trim(),
+            };
+            const trend = trendOf(row);
+            if (trend.length) out.trend = trend;
+            return out;
+          })
           .filter((row) => row.keyword || row.count);
 
       const save = () => Store.setConcept(product.id, path, collect());
 
-      wrap.addEventListener("change", save);
+      /* 검색량을 물어보고 칸을 채운다. 사람이 손으로 적어 둔 숫자는 덮지
+         않는다 — 🔄 를 눌렀을 때만 덮어쓴다. */
+      function look(row, overwrite) {
+        const word = row.querySelector(".krow__word").value.trim();
+        const count = row.querySelector(".krow__count");
+        const trend = row.querySelector("[data-krow-trend]");
+        if (!word) return;
+        if (count.value.trim() && !overwrite) return;
+
+        row.classList.add("krow--busy");
+        trend.textContent = "검색량 가져오는 중…";
+        Meta.fetchKeyword(App.proxyUrl(), word).then(
+          (data) => {
+            row.classList.remove("krow--busy");
+            if (data.total != null) count.value = String(data.total);
+            row.dataset.trend = (data.trend || []).length ? JSON.stringify(data.trend) : "";
+            trend.innerHTML = sparkline(data.trend || []);
+            if (data.note) {
+              trend.insertAdjacentHTML(
+                "beforeend",
+                '<span class="spark__cap">' + UI.escapeHtml(data.note) + "</span>"
+              );
+            }
+            save();
+          },
+          (error) => {
+            row.classList.remove("krow--busy");
+            trend.innerHTML = '<span class="spark__cap">' + UI.escapeHtml(error.message) + "</span>";
+          }
+        );
+      }
+
+      wrap.addEventListener("change", (event) => {
+        const row = event.target.closest(".krow");
+        if (row && event.target.matches(".krow__word")) look(row, false);
+        save();
+      });
+
       wrap.addEventListener("click", (event) => {
         if (event.target.matches("[data-krow-add]")) {
           wrap
             .querySelector("[data-krow-add]")
-            .insertAdjacentHTML(
-              "beforebegin",
-              '<div class="krow"><input type="text" class="input krow__word" placeholder="키워드" aria-label="키워드">' +
-                '<input type="text" class="input krow__count" placeholder="검색량" aria-label="검색량" inputmode="numeric">' +
-                '<button type="button" class="icon-btn" data-krow-remove aria-label="이 줄 삭제">✕</button></div>'
-            );
+            .insertAdjacentHTML("beforebegin", keywordRow({ keyword: "", count: "" }, -1, hint));
+          return;
+        }
+        if (event.target.matches("[data-krow-look]")) {
+          look(event.target.closest(".krow"), true);
+          return;
         }
         if (event.target.matches("[data-krow-remove]")) {
           event.target.closest(".krow").remove();
