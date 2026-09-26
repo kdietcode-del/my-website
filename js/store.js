@@ -125,16 +125,12 @@ const Store = (() => {
   }
 
   /* ---------- 제품 컨셉보드 ----------
-     글 한 덩어리는 { text, font, size } 로 들고 있는다. 글꼴과 크기를
-     덩어리 단위로 고르게 해서, 글자마다 서식이 뒤섞이는 일을 피한다. */
+     글 한 덩어리는 { text } 로만 들고 있는다. 글꼴과 크기는 칸마다 정해져
+     있어 따로 담아 둘 것이 없다. */
 
   function textPart(value) {
     const part = value && typeof value === "object" ? value : {};
-    return {
-      text: typeof part.text === "string" ? part.text : "",
-      font: part.font || "sans",
-      size: Number(part.size) || 16,
-    };
+    return { text: typeof part.text === "string" ? part.text : "" };
   }
 
   function normalizeConcept(value) {
@@ -440,6 +436,35 @@ const Store = (() => {
     save();
   }
 
+  /* 화면에서 끌어다 놓은 순서를 그대로 받는다. 목록에 없던 id 는 무시하고,
+     빠진 항목은 뒤에 붙여 잃어버리지 않는다. 걸러 보고 있을 때는 화면에
+     보이는 것만 오므로 이 처리가 꼭 필요하다. */
+  function setIdeaOrder(orderedIds) {
+    const byId = new Map(state.ideas.map((i) => [i.id, i]));
+    const next = [];
+    orderedIds.forEach((id) => {
+      const idea = byId.get(id);
+      if (idea) {
+        next.push(idea);
+        byId.delete(id);
+      }
+    });
+    byId.forEach((idea) => next.push(idea));
+    state.ideas = next;
+    save();
+  }
+
+  function moveIdea(id, step) {
+    const from = state.ideas.findIndex((i) => i.id === id);
+    if (from < 0) return false;
+    const to = from + step;
+    if (to < 0 || to >= state.ideas.length) return false;
+    const [moved] = state.ideas.splice(from, 1);
+    state.ideas.splice(to, 0, moved);
+    save();
+    return true;
+  }
+
   /* ---------- 런칭 제품 ---------- */
 
   function addProduct(data) {
@@ -697,6 +722,8 @@ const Store = (() => {
     addIdea,
     updateIdea,
     removeIdea,
+    setIdeaOrder,
+    moveIdea,
     addProduct,
     updateProduct,
     removeProduct,

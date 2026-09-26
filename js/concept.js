@@ -2,18 +2,15 @@
    제품 컨셉보드
 
    제품 하나를 가로로 긴 한 장에 펼쳐 놓고, 그 자리에서 바로 고친다.
-   글을 누르면 커서가 잡히고, 위쪽 막대에서 글꼴과 크기를 고를 수 있다.
-   서식은 글자 단위가 아니라 '덩어리' 단위로 붙는다 — 그래야 나중에 봐도
-   뒤죽박죽이 되지 않는다.
+   글을 누르면 커서가 잡힌다. 글꼴과 크기는 고르게 하지 않는다 — 칸마다
+   정해진 크기로 두어야 한 장짜리 문서로 읽힌다.
    ============================================================ */
 
 const Concept = (() => {
   let activeId = null;
-  let focused = null; // 지금 커서가 있는 글 덩어리
 
   function setActive(id) {
     activeId = id || null;
-    focused = null;
   }
 
   function getActive() {
@@ -22,38 +19,15 @@ const Concept = (() => {
 
   /* ---------- 글 덩어리 ---------- */
 
-  function fontCss(key) {
-    const found = CONCEPT_FONTS.find((f) => f.key === key);
-    return (found || CONCEPT_FONTS[0]).css;
-  }
-
-  function textStyle(part) {
-    return "font-family:" + fontCss(part.font) + ";font-size:" + (Number(part.size) || 16) + "px";
-  }
-
+  /* 글꼴과 크기는 고르게 하지 않는다. 칸마다 정해진 크기로만 두어야
+     보드가 한 장짜리 문서로 읽힌다. */
   function textHtml(path, part, placeholder, extraClass) {
     return (
       '<div class="ctext' + (extraClass ? " " + extraClass : "") + '" contenteditable="true" ' +
-      'data-path="' + path + '" style="' + textStyle(part) + '" ' +
+      'data-path="' + path + '" ' +
       'data-placeholder="' + UI.escapeHtml(placeholder) + '" role="textbox" aria-label="' +
       UI.escapeHtml(placeholder) + '">' +
       UI.escapeHtml(part.text || "") +
-      "</div>"
-    );
-  }
-
-  /* ---------- 위쪽 서식 막대 ---------- */
-
-  function toolbarHtml() {
-    const fonts = CONCEPT_FONTS.map(
-      (f) => '<option value="' + f.key + '">' + UI.escapeHtml(f.label) + "</option>"
-    ).join("");
-    const sizes = CONCEPT_SIZES.map((s) => '<option value="' + s + '">' + s + "</option>").join("");
-    return (
-      '<div class="ctools" id="ctools">' +
-      '<span class="ctools__label" id="ctools-target">글을 누르면 여기서 글꼴을 바꿀 수 있습니다</span>' +
-      '<select class="select" id="ctools-font" disabled aria-label="글꼴">' + fonts + "</select>" +
-      '<select class="select" id="ctools-size" disabled aria-label="글자 크기">' + sizes + "</select>" +
       "</div>"
     );
   }
@@ -91,30 +65,46 @@ const Concept = (() => {
     );
   }
 
-  /* 7. 경쟁제품 — 브랜드 · 제품명 · 링크 */
+  /* 7. 경쟁제품 — 썸네일이 붙은 작은 카드. 줄로 길게 늘어놓으면 가로가
+     쓸데없이 길어지고, 정작 어떤 제품인지는 눈에 안 들어온다. */
+  function rivalCard(row, index) {
+    const link = UI.safeUrl(row.url);
+    const shot = UI.safeUrl(row.image);
+    return (
+      '<div class="rcard" data-rcard="' + index + '">' +
+      '<div class="rcard__shot">' +
+      (shot
+        ? '<img src="' + UI.escapeHtml(shot) + '" alt="" loading="lazy">'
+        : '<span class="rcard__blank" aria-hidden="true">🔍</span>') +
+      '<button type="button" class="img-thumb__x" data-rcard-remove aria-label="이 경쟁제품 삭제">✕</button>' +
+      "</div>" +
+      '<input type="text" class="input rcard__f" data-f="brand" value="' +
+      UI.escapeHtml(row.brand || "") + '" placeholder="브랜드" aria-label="브랜드">' +
+      '<input type="text" class="input rcard__f" data-f="name" value="' +
+      UI.escapeHtml(row.name || "") + '" placeholder="제품명" aria-label="제품명">' +
+      '<input type="url" class="input rcard__f" data-f="url" value="' +
+      UI.escapeHtml(row.url || "") + '" placeholder="상세페이지 링크" aria-label="링크">' +
+      '<div class="rcard__row">' +
+      '<button type="button" class="btn btn--ghost btn--sm" data-rcard-fetch>썸네일 가져오기</button>' +
+      (link
+        ? '<a class="btn btn--ghost btn--sm" href="' + UI.escapeHtml(link) +
+          '" target="_blank" rel="noopener noreferrer">열기</a>'
+        : "") +
+      "</div>" +
+      '<p class="rcard__msg" data-rcard-msg></p>' +
+      "</div>"
+    );
+  }
+
   function rivalRows(rows) {
-    const list = (rows.length ? rows : [{ brand: "", name: "", url: "" }])
-      .map(
-        (row, index) =>
-          '<div class="rrow" data-rrow="' + index + '">' +
-          '<input type="text" class="input" data-f="brand" value="' + UI.escapeHtml(row.brand || "") +
-          '" placeholder="브랜드" aria-label="브랜드">' +
-          '<input type="text" class="input" data-f="name" value="' + UI.escapeHtml(row.name || "") +
-          '" placeholder="제품명" aria-label="제품명">' +
-          '<input type="url" class="input" data-f="url" value="' + UI.escapeHtml(row.url || "") +
-          '" placeholder="https://" aria-label="링크">' +
-          (UI.safeUrl(row.url)
-            ? '<a class="btn btn--sm btn--ghost" href="' + UI.escapeHtml(UI.safeUrl(row.url)) +
-              '" target="_blank" rel="noopener noreferrer">열기</a>'
-            : "") +
-          '<button type="button" class="icon-btn" data-rrow-remove aria-label="이 줄 삭제">✕</button>' +
-          "</div>"
-      )
+    const list = (rows.length ? rows : [{ brand: "", name: "", url: "", image: "" }])
+      .map(rivalCard)
       .join("");
     return (
-      '<div class="rrows" data-rivals>' +
+      '<div class="rcards" data-rivals>' +
       list +
-      '<button type="button" class="btn btn--ghost btn--sm" data-rrow-add>+ 경쟁제품 추가</button>' +
+      '<button type="button" class="rcard rcard--add" data-rcard-add>' +
+      "<span>＋</span>경쟁제품 추가</button>" +
       "</div>"
     );
   }
@@ -270,7 +260,6 @@ const Concept = (() => {
         '<button type="button" class="btn btn--ghost" data-act="print">인쇄 · PDF</button>' +
         "</div>" +
         "</div>" +
-        toolbarHtml() +
         boardHtml(product);
       bindBoard(root, product);
       return;
@@ -314,7 +303,6 @@ const Concept = (() => {
     });
     root.querySelector('[data-act="print"]').addEventListener("click", () => window.print());
 
-    bindToolbar(root, product);
     bindTexts(root, product);
     bindKeywords(root, product);
     bindRivals(root, product);
@@ -322,45 +310,6 @@ const Concept = (() => {
     bindImages(root, product);
 
     Images.hydrate(root);
-  }
-
-  function bindToolbar(root, product) {
-    const fontSelect = root.querySelector("#ctools-font");
-    const sizeSelect = root.querySelector("#ctools-size");
-    const label = root.querySelector("#ctools-target");
-
-    function apply() {
-      if (!focused) return;
-      const path = focused.dataset.path;
-      const font = fontSelect.value;
-      const size = Number(sizeSelect.value);
-      focused.style.fontFamily = fontCss(font);
-      focused.style.fontSize = size + "px";
-      Store.setConcept(product.id, path, { font, size });
-    }
-
-    fontSelect.addEventListener("change", apply);
-    sizeSelect.addEventListener("change", apply);
-
-    root.addEventListener("focusin", (event) => {
-      const node = event.target.closest(".ctext");
-      if (!node) return;
-      focused = node;
-      const part = Store.getConcept(product.id);
-      fontSelect.disabled = false;
-      sizeSelect.disabled = false;
-      /* 지금 덩어리에 붙어 있는 값을 막대에 비춰 준다. */
-      const size = Math.round(parseFloat(getComputedStyle(node).fontSize));
-      const family = node.style.fontFamily;
-      const font = CONCEPT_FONTS.find((f) => f.css === family);
-      fontSelect.value = font ? font.key : "sans";
-      sizeSelect.value = CONCEPT_SIZES.reduce(
-        (best, s) => (Math.abs(s - size) < Math.abs(best - size) ? s : best),
-        CONCEPT_SIZES[0]
-      );
-      label.textContent = (node.dataset.placeholder || "글") + " 서식";
-      void part;
-    });
   }
 
   function bindTexts(root, product) {
@@ -418,32 +367,76 @@ const Concept = (() => {
     const wrap = root.querySelector("[data-rivals]");
     if (!wrap) return;
 
+    /* 화면에 놓인 카드를 그대로 읽는다. 썸네일 주소는 카드가 들고 있다. */
     const collect = () =>
-      Array.from(wrap.querySelectorAll(".rrow"))
-        .map((row) => {
-          const out = {};
-          row.querySelectorAll("[data-f]").forEach((f) => (out[f.dataset.f] = f.value.trim()));
+      Array.from(wrap.querySelectorAll(".rcard:not(.rcard--add)"))
+        .map((card) => {
+          const out = { image: card.dataset.image || "" };
+          card.querySelectorAll("[data-f]").forEach((f) => (out[f.dataset.f] = f.value.trim()));
           return out;
         })
         .filter((row) => row.brand || row.name || row.url);
 
-    wrap.addEventListener("change", () => Store.setConcept(product.id, "rivals", collect()));
+    const save = () => Store.setConcept(product.id, "rivals", collect());
+
+    /* 지금 화면의 썸네일 주소를 카드에 기억시켜 둔다. */
+    Array.from(wrap.querySelectorAll(".rcard:not(.rcard--add)")).forEach((card, index) => {
+      const saved = (Store.getConcept(product.id).rivals || [])[index];
+      card.dataset.image = (saved && saved.image) || "";
+    });
+
+    wrap.addEventListener("change", save);
+
     wrap.addEventListener("click", (event) => {
-      if (event.target.matches("[data-rrow-add]")) {
+      if (event.target.closest("[data-rcard-add]")) {
         wrap
-          .querySelector("[data-rrow-add]")
-          .insertAdjacentHTML(
-            "beforebegin",
-            '<div class="rrow">' +
-              '<input type="text" class="input" data-f="brand" placeholder="브랜드" aria-label="브랜드">' +
-              '<input type="text" class="input" data-f="name" placeholder="제품명" aria-label="제품명">' +
-              '<input type="url" class="input" data-f="url" placeholder="https://" aria-label="링크">' +
-              '<button type="button" class="icon-btn" data-rrow-remove aria-label="이 줄 삭제">✕</button></div>'
-          );
+          .querySelector("[data-rcard-add]")
+          .insertAdjacentHTML("beforebegin", rivalCard({ brand: "", name: "", url: "", image: "" }, -1));
+        return;
       }
-      if (event.target.matches("[data-rrow-remove]")) {
-        event.target.closest(".rrow").remove();
-        Store.setConcept(product.id, "rivals", collect());
+
+      if (event.target.matches("[data-rcard-remove]")) {
+        event.target.closest(".rcard").remove();
+        save();
+        return;
+      }
+
+      if (event.target.matches("[data-rcard-fetch]")) {
+        const card = event.target.closest(".rcard");
+        const msg = card.querySelector("[data-rcard-msg]");
+        const url = UI.safeUrl(card.querySelector('[data-f="url"]').value);
+        if (!url) {
+          msg.textContent = "먼저 상세페이지 링크를 넣어 주세요.";
+          return;
+        }
+        event.target.disabled = true;
+        msg.textContent = "가져오는 중…";
+        Meta.fetchMeta(App.proxyUrl(), url).then(
+          (data) => {
+            event.target.disabled = false;
+            const brand = card.querySelector('[data-f="brand"]');
+            const name = card.querySelector('[data-f="name"]');
+            if (!brand.value.trim() && data.siteName) brand.value = data.siteName;
+            if (!name.value.trim() && data.title) name.value = data.title;
+            if (data.image) {
+              card.dataset.image = data.image;
+              const shot = card.querySelector(".rcard__shot");
+              shot.querySelector(".rcard__blank, img")?.remove();
+              shot.insertAdjacentHTML(
+                "afterbegin",
+                '<img src="' + UI.escapeHtml(UI.safeUrl(data.image)) + '" alt="" loading="lazy">'
+              );
+              msg.textContent = "가져왔습니다.";
+            } else {
+              msg.textContent = "이 페이지에는 대표 이미지가 없습니다.";
+            }
+            save();
+          },
+          (error) => {
+            event.target.disabled = false;
+            msg.textContent = error.message;
+          }
+        );
       }
     });
   }

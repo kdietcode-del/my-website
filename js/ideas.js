@@ -279,6 +279,9 @@ const Ideas = (() => {
 
     return (
       '<article class="card idea-card" data-id="' + idea.id + '">' +
+      '<button type="button" class="card__grip" data-idea-grip draggable="true" ' +
+      'aria-label="' + UI.escapeHtml(idea.name) + ' 순서 바꾸기. 끌어서 옮기거나 좌·우 화살표를 누르세요">' +
+      '<span aria-hidden="true">⠿</span></button>' +
       (head.length ? '<header class="card__head">' + head.join("") + "</header>" : "") +
       '<h3 class="card__title">' + UI.escapeHtml(idea.name) + "</h3>" +
       UI.thumbsHtml(idea.images, { limit: 4 }) +
@@ -369,6 +372,70 @@ const Ideas = (() => {
     bind(root);
   }
 
+  /* ---------- 카드 순서 바꾸기 ----------
+     손잡이(⠿)를 끌어서 옮긴다. 카드 전체를 끌리게 하면 안에 있는 링크와
+     버튼을 누르기 어려워진다.
+     끌기는 키보드로 못 하므로 손잡이에서 ← → 로도 옮길 수 있게 둔다. */
+  function bindReorder(root) {
+    const grid = root.querySelector(".card-grid");
+    if (!grid) return;
+
+    let dragging = null;
+
+    const persist = () => {
+      const ids = Array.from(grid.querySelectorAll(".idea-card")).map((c) => c.dataset.id);
+      Store.setIdeaOrder(ids);
+    };
+
+    grid.querySelectorAll("[data-idea-grip]").forEach((grip) => {
+      const card = grip.closest(".idea-card");
+
+      grip.addEventListener("dragstart", (event) => {
+        dragging = card;
+        card.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", card.dataset.id);
+        if (event.dataTransfer.setDragImage) event.dataTransfer.setDragImage(card, 24, 24);
+      });
+
+      grip.addEventListener("dragend", () => {
+        if (dragging) dragging.classList.remove("is-dragging");
+        grid.querySelectorAll(".idea-card").forEach((c) => c.classList.remove("is-over"));
+        dragging = null;
+        persist();
+      });
+
+      grip.addEventListener("keydown", (event) => {
+        const step = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        if (!Store.moveIdea(card.dataset.id, step)) return;
+        const id = card.dataset.id;
+        App.render();
+        const fresh = document.querySelector('.idea-card[data-id="' + id + '"] [data-idea-grip]');
+        if (fresh) fresh.focus();
+      });
+    });
+
+    grid.addEventListener("dragover", (event) => {
+      if (!dragging) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const over = event.target.closest(".idea-card");
+      if (!over || over === dragging) return;
+      /* 카드가 격자로 놓여 있어 좌우 위치로 앞뒤를 정한다. */
+      const box = over.getBoundingClientRect();
+      const after = event.clientX > box.left + box.width / 2;
+      grid.querySelectorAll(".idea-card").forEach((c) => c.classList.remove("is-over"));
+      over.classList.add("is-over");
+      grid.insertBefore(dragging, after ? over.nextSibling : over);
+    });
+
+    grid.addEventListener("drop", (event) => {
+      if (dragging) event.preventDefault();
+    });
+  }
+
   function bind(root) {
     const createBtn = root.querySelector('[data-act="create"]');
     if (createBtn) createBtn.addEventListener("click", openCreate);
@@ -415,6 +482,8 @@ const Ideas = (() => {
       const idea = Store.state.ideas.find((i) => i.id === card.dataset.id);
       return (idea && idea.images) || [];
     });
+
+    bindReorder(root);
 
     root.querySelectorAll(".idea-card").forEach((card) => {
       const id = card.dataset.id;

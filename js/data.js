@@ -23,17 +23,6 @@ const EFFICACIES = [
 
 /* ---------- 제품 컨셉보드 ---------- */
 
-/* 글꼴 — 따로 내려받지 않고 기기에 이미 있는 것만 쓴다.
-   인터넷이 끊겨도, 파일을 그냥 열어도 그대로 보인다. */
-const CONCEPT_FONTS = [
-  { key: "sans", label: "고딕", css: 'system-ui, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif' },
-  { key: "serif", label: "명조", css: '"Nanum Myeongjo", "Apple Myungjo", Batang, serif' },
-  { key: "round", label: "둥근고딕", css: '"Gowun Dodum", "Nanum Gothic", "Apple SD Gothic Neo", sans-serif' },
-  { key: "mono", label: "모노", css: 'ui-monospace, Consolas, "D2Coding", monospace' },
-];
-
-const CONCEPT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 56];
-
 /* 상표 · 비포애프터 같은 가부 판단 */
 const CHECK_STATES = [
   { key: "", label: "확인 전" },
