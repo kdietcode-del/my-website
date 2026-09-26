@@ -144,40 +144,9 @@ const Pipeline = (() => {
       );
     }
 
-    const overall = Store.overallProgress();
-    const totals = products.reduce(
-      (acc, p) => {
-        const progress = Store.productProgress(p);
-        acc.done += progress.done;
-        acc.total += progress.total;
-        acc.stagesDone += progress.stagesDone;
-        return acc;
-      },
-      { done: 0, total: 0, stagesDone: 0 }
-    );
-
-    const hero =
-      '<section class="hero">' +
-      '<div class="hero__figure">' +
-      '<p class="hero__label">전체 평균 진행률</p>' +
-      '<p class="hero__value">' + Math.round(overall * 100) + "%</p>" +
-      UI.meter(overall, { size: "lg", hideValue: true, label: "전체 평균" }) +
-      "</div>" +
-      '<div class="tiles">' +
-      tileHtml("런칭 준비 제품", products.length + "개") +
-      tileHtml("완료한 단계", totals.stagesDone + " / " + products.length * STAGE_TEMPLATE.length) +
-      tileHtml("남은 할 일", totals.total - totals.done + "개") +
-      "</div>" +
-      "</section>";
-
-    return hero + '<div class="card-grid">' + products.map(productCardHtml).join("") + "</div>";
-  }
-
-  function tileHtml(label, value) {
-    return (
-      '<div class="tile"><p class="tile__label">' + UI.escapeHtml(label) + "</p>" +
-      '<p class="tile__value">' + UI.escapeHtml(value) + "</p></div>"
-    );
+    /* 요약 숫자는 두지 않는다. 제품 카드마다 진행률이 이미 붙어 있어,
+       위에 한 번 더 두면 같은 이야기를 두 번 하는 셈이었다. */
+    return '<div class="card-grid">' + products.map(productCardHtml).join("") + "</div>";
   }
 
   /* ---------- 단일 제품 상세 화면 ---------- */
