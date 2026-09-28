@@ -221,6 +221,7 @@ const Concept = (() => {
       "<span>＋</span>" + UI.escapeHtml(label) +
       "</button>" +
       '<input type="file" accept="image/*" multiple hidden data-image-file>' +
+      '<p class="czone__hint">누르고 Ctrl+V · 끌어다 놓기도 됩니다</p>' +
       "</div>"
     );
   }
@@ -701,11 +702,7 @@ const Concept = (() => {
           url: item.dataset.imageUrl || "",
         }));
 
-      zone.querySelector("[data-image-add]").addEventListener("click", () => fileInput.click());
-
-      fileInput.addEventListener("change", () => {
-        const files = Array.from(fileInput.files || []);
-        fileInput.value = "";
+      function takeFiles(files) {
         if (!files.length) return;
         UI.toast(files.length + "장 넣는 중…");
         Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
@@ -719,7 +716,19 @@ const Concept = (() => {
             App.render();
           }
         );
+      }
+
+      zone.querySelector("[data-image-add]").addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", () => {
+        const files = Array.from(fileInput.files || []);
+        fileInput.value = "";
+        takeFiles(files);
       });
+
+      /* 캡처한 그림을 Ctrl+V 로 바로 넣는다. 파일로 저장했다 다시 고르는 건
+         번거롭다. 칸이 둘이라(제품 사진 · 광고소재) 누른 쪽으로 들어간다. */
+      UI.bindImageTarget(zone, takeFiles);
 
       grid.addEventListener("click", (event) => {
         if (!event.target.matches("[data-image-remove]")) return;

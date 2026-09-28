@@ -314,7 +314,7 @@ const UI = (() => {
       "</div>" +
       '<p class="field__hint" data-image-status>' +
       (available
-        ? "최대 " + MAX_IMAGES + "장. 파일은 자동으로 줄여서 저장합니다."
+        ? "최대 " + MAX_IMAGES + "장. 이 칸을 누르고 Ctrl+V 로 붙여넣거나, 그림을 끌어다 놓아도 됩니다."
         : escapeHtml(Images.whyUnavailable()) + " 이미지 주소만 넣을 수 있습니다.") +
       "</p>" +
       "</div>"
@@ -331,6 +331,98 @@ const UI = (() => {
   }
 
   /* 폼 안에서 이미지 담기 · 빼기를 처리한다. */
+
+  /* ---------- 이미지 붙여넣기 · 끌어다 놓기 ----------
+
+     캡처한 그림을 파일로 저장했다가 다시 고르게 하는 건 번거롭다. Ctrl+V 로
+     바로 들어가야 한다.
+
+     그런데 붙여넣기는 초점이 있는 곳으로만 간다. 이미지 칸은 글 칸이 아니라
+     초점을 받을 일이 없다. 그래서 문서 전체에서 붙여넣기를 듣되, 마지막으로
+     손댄 이미지 칸으로 보낸다. 화면에 칸이 하나뿐이면 손대지 않아도 그리로
+     간다. 어디로 들어갈지 헷갈리지 않도록, 받을 칸에 표시를 켜 둔다. */
+
+  function imageFilesFrom(transfer) {
+    if (!transfer) return [];
+    const out = [];
+    Array.from(transfer.files || []).forEach((file) => {
+      if (file && String(file.type).indexOf("image/") === 0) out.push(file);
+    });
+    if (out.length) return out;
+    Array.from(transfer.items || []).forEach((item) => {
+      if (item.kind === "file" && String(item.type).indexOf("image/") === 0) {
+        const file = item.getAsFile();
+        if (file) out.push(file);
+      }
+    });
+    return out;
+  }
+
+  let pasteTarget = null;
+
+  function markPasteTarget(zone) {
+    document
+      .querySelectorAll(".is-paste-target")
+      .forEach((node) => node.classList.remove("is-paste-target"));
+    pasteTarget = zone || null;
+    if (zone) zone.classList.add("is-paste-target");
+  }
+
+  function resolvePasteTarget() {
+    if (pasteTarget && document.contains(pasteTarget)) return pasteTarget;
+    /* 창이 떠 있으면 그 안에서 먼저 찾는다. */
+    const modal = document.getElementById("modal");
+    const scope = modal && modal.open ? modal : document;
+    const zones = scope.querySelectorAll("[data-image-drop]");
+    return zones.length === 1 ? zones[0] : null;
+  }
+
+  function bindPasteOnce() {
+    if (bindPasteOnce.done) return;
+    bindPasteOnce.done = true;
+
+    document.addEventListener("click", (event) => {
+      const zone = event.target.closest ? event.target.closest("[data-image-drop]") : null;
+      if (zone) markPasteTarget(zone);
+    });
+
+    document.addEventListener("paste", (event) => {
+      const files = imageFilesFrom(event.clipboardData);
+      if (!files.length) return;
+      const zone = resolvePasteTarget();
+      if (!zone || !zone.__onImageFiles) return;
+      event.preventDefault();
+      zone.__onImageFiles(files);
+    });
+  }
+
+  /* 이 칸이 붙여넣기와 끌어다 놓기를 받게 한다. */
+  function bindImageTarget(zone, onFiles) {
+    if (!zone) return;
+    zone.dataset.imageDrop = "";
+    zone.__onImageFiles = onFiles;
+    bindPasteOnce();
+
+    zone.addEventListener("dragover", (event) => {
+      if (!Array.from(event.dataTransfer.types || []).includes("Files")) return;
+      event.preventDefault();
+      zone.classList.add("is-drag-over");
+    });
+    ["dragleave", "dragend"].forEach((name) => {
+      zone.addEventListener(name, () => zone.classList.remove("is-drag-over"));
+    });
+    zone.addEventListener("drop", (event) => {
+      const files = imageFilesFrom(event.dataTransfer);
+      zone.classList.remove("is-drag-over");
+      if (!files.length) return;
+      event.preventDefault();
+      markPasteTarget(zone);
+      onFiles(files);
+    });
+
+    /* 화면에 칸이 이것 하나뿐이면 누르지 않아도 여기로 들어간다. */
+    if (document.querySelectorAll("[data-image-drop]").length === 1) markPasteTarget(zone);
+  }
   function bindImages(node) {
     const wrap = node.querySelector("[data-images]");
     if (!wrap) return;
@@ -351,6 +443,13 @@ const UI = (() => {
     fileInput.addEventListener("change", () => {
       const files = Array.from(fileInput.files || []);
       fileInput.value = "";
+      takeFiles(files);
+    });
+
+    /* 붙여넣기 · 끌어다 놓기로도 같은 자리로 들어온다. */
+    bindImageTarget(wrap, takeFiles);
+
+    function takeFiles(files) {
       if (!files.length) return;
       const room = roomLeft();
       if (room <= 0) {
@@ -381,7 +480,7 @@ const UI = (() => {
             (files.length > picked.length ? " (" + MAX_IMAGES + "장 제한)" : "")
         );
       });
-    });
+    }
 
     function addByUrl() {
       const raw = urlInput.value.trim();
@@ -651,5 +750,6 @@ const UI = (() => {
     closeModal,
     openForm,
     confirmAction,
+    bindImageTarget,
   };
 })();
