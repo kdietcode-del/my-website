@@ -2072,3 +2072,87 @@ body.is-locked #settings-btn { display: none; }
 @media (max-width: 380px) {
   .tab { padding: 10px 7px; font-size: 0.8125rem; }
 }
+
+/* ============================================================
+   제품 컨셉보드 인쇄 — A4 한 장
+
+   화면은 빈 칸도 눌러 채워야 하니 다 보여 준다. 종이는 다르다. 안 채운
+   칸이 자리만 차지하면 정작 채운 것이 두 장으로 밀린다.
+
+   자리를 자동 배치에 맡기지 않고 못박는다. 시장크기와 참고제품이 같은
+   줄에 나란히 와야 한 눈에 대조가 된다.
+   ============================================================ */
+@media print {
+  @page { size: A4 portrait; margin: 9mm; }
+
+  html { font-size: 9.5px; }
+  body { background: #fff; }
+  .sitefoot, .photo__add, [data-krow-add], [data-rcard-add], .rcard--add,
+  [data-spec-add], .spark__add, .czone__add { display: none !important; }
+  .is-blank { display: none !important; }
+
+  .cboard { border: none; padding: 0; }
+
+  /* 머리 — 사진 · 이름과 USP · 제원 */
+  .cboard__head {
+    grid-template-columns: 26mm minmax(0, 1fr) 42mm;
+    gap: 5mm;
+    padding-bottom: 3mm;
+    margin-bottom: 3mm;
+    border-bottom-width: 1px;
+  }
+  .cboard__eyebrow { font-size: 7px; }
+  .cboard__name { font-size: 15px; margin: 1px 0 2px; }
+  .ctext--lead { font-size: 10px; font-weight: 600; }
+  .cboard__shot .czone__item { aspect-ratio: 3 / 4; }
+  .cspecs { gap: 1px; }
+  .cspec { grid-template-columns: 16mm minmax(0, 1fr); }
+  .cspec__label, .cspec__value { padding: 1px 2px; font-size: 8.5px; border: none; }
+
+  /* USP 는 제품명 바로 아래 — 따로 칸을 두지 않는다 */
+  .cpanel--inhead {
+    border: none;
+    padding: 2mm 0 0;
+    margin-top: 1mm;
+    border-top: 1px solid var(--grid);
+  }
+  .cpanel--inhead .cpanel__title { font-size: 7.5px; margin-bottom: 1px; }
+
+  /* 본문 — 자리를 못박는다 */
+  .cboard__grid { grid-template-columns: 1fr 1fr; gap: 3mm; }
+  .cpanel--wide, .cpanel--full { grid-column: auto; }
+  .cpanel { padding: 2.5mm 3mm; break-inside: avoid; }
+  .cpanel__title { font-size: 8px; margin-bottom: 1.5mm; }
+  .cpanel__hint { font-size: 7.5px; margin: 1.5mm 0 1mm; }
+  .ctext { padding: 0; margin: 0; font-size: 9.5px; line-height: 1.45; }
+  .ctext--small { font-size: 8.5px; }
+
+  [data-panel="oneLiner"]    { grid-area: 1 / 1; }
+  [data-panel="efficacy"]    { grid-area: 1 / 2; }
+  [data-panel="target"]      { grid-area: 2 / 1; }
+  [data-panel="ads"]         { grid-area: 2 / 2; }
+  [data-panel="market"]      { grid-area: 3 / 1; }
+  [data-panel="rivals"]      { grid-area: 3 / 2; }
+  [data-panel="trademark"]   { grid-area: 4 / 1; }
+  [data-panel="beforeAfter"] { grid-area: 4 / 2; }
+
+  /* 키워드 — 두 줄씩, 단추 없이 */
+  .krows { grid-template-columns: 1fr 1fr; gap: 1px 4mm; }
+  .krow { grid-template-columns: minmax(0, 1fr) 14mm; gap: 2mm; }
+  .krow .input { border: none; padding: 0; font-size: 8.5px; background: none; }
+  .krow__trend { display: none; }
+
+  /* 참고제품 — 사진과 이름만 */
+  .rcards { grid-template-columns: 1fr 1fr; gap: 2mm; }
+  .rcard { grid-template-columns: 12mm minmax(0, 1fr); gap: 1px 2mm; padding: 1.5mm; }
+  .rcard__shot { min-height: 12mm; grid-row: 1 / span 2; }
+  .rcard .input { border: none; padding: 0; font-size: 8px; background: none; }
+  .rcard__f[data-f="url"], .rcard__link, .rcard__msg { display: none !important; }
+
+  /* 가부 판단 */
+  .ccheck { gap: 2mm; }
+  .ccheck .select { border: none; padding: 0; font-size: 9px; background: none; }
+
+  /* 광고소재 */
+  .czone__grid { grid-template-columns: repeat(auto-fill, minmax(16mm, 1fr)); gap: 1.5mm; }
+}

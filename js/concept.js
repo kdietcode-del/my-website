@@ -37,9 +37,10 @@ const Concept = (() => {
 
   /* ---------- 칸들 ---------- */
 
-  function panel(title, inner, extraClass) {
+  function panel(title, inner, extraClass, key) {
     return (
-      '<section class="cpanel' + (extraClass ? " " + extraClass : "") + '">' +
+      '<section class="cpanel' + (extraClass ? " " + extraClass : "") + '"' +
+      (key ? ' data-panel="' + key + '"' : "") + ">" +
       '<h3 class="cpanel__title">' + UI.escapeHtml(title) + "</h3>" +
       '<div class="cpanel__body">' + inner + "</div>" +
       "</section>"
@@ -279,13 +280,73 @@ const Concept = (() => {
     );
   }
 
+  /* ---------- 인쇄 준비 ----------
+
+     화면은 빈 칸도 눌러 채울 수 있어야 하니 다 보여 준다. 종이는 다르다.
+     안 채운 칸이 자리만 차지하면 정작 채운 것이 두 장으로 밀린다.
+
+     그래서 인쇄 직전에 빈 것에 표시를 달고, USP 를 제품명 아래로 옮긴다.
+     끝나면 그대로 되돌린다 — 화면은 건드리지 않는다. */
+  let printBack = null;
+
+  function preparePrint(root) {
+    const blank = (node, yes) => node.classList.toggle("is-blank", !!yes);
+
+    /* 글 칸이 비었으면 그 칸째로 뺀다 */
+    root.querySelectorAll(".cpanel").forEach((pane) => {
+      const texts = Array.from(pane.querySelectorAll(".ctext"));
+      const fields = Array.from(pane.querySelectorAll("input, textarea, select"));
+      const hasText = texts.some((t) => t.innerText.trim());
+      const hasField = fields.some((f) => (f.value || "").trim());
+      const hasImage = pane.querySelector(".czone__item, .img-thumb");
+      blank(pane, !hasText && !hasField && !hasImage);
+    });
+
+    root.querySelectorAll(".krow").forEach((row) => {
+      const word = row.querySelector(".krow__word");
+      const count = row.querySelector(".krow__count");
+      blank(row, !word.value.trim() && !count.value.trim());
+    });
+
+    root.querySelectorAll(".rcard").forEach((card) => {
+      const filled = Array.from(card.querySelectorAll("[data-f]")).some((f) => f.value.trim());
+      blank(card, !filled);
+    });
+
+    root.querySelectorAll(".cspec").forEach((row) => {
+      const value = row.querySelector('[data-sf="value"]');
+      blank(row, !value || !value.value.trim());
+    });
+
+    root.querySelectorAll(".ctext").forEach((node) => blank(node, !node.innerText.trim()));
+
+    /* USP 는 제품 이름 바로 아래에 붙는다. 따로 칸을 차지할 만큼 긴 글이
+       아니고, 이름 · 부제와 이어 읽어야 뜻이 산다. */
+    const usp = root.querySelector('[data-panel="usp"]');
+    const title = root.querySelector(".cboard__title");
+    if (usp && title && !printBack) {
+      printBack = { node: usp, parent: usp.parentNode, next: usp.nextSibling };
+      usp.classList.add("cpanel--inhead");
+      title.appendChild(usp);
+    }
+  }
+
+  function restorePrint(root) {
+    root.querySelectorAll(".is-blank").forEach((node) => node.classList.remove("is-blank"));
+    if (printBack) {
+      printBack.node.classList.remove("cpanel--inhead");
+      printBack.parent.insertBefore(printBack.node, printBack.next);
+      printBack = null;
+    }
+  }
+
   /* ---------- 한 장 짜기 ---------- */
 
   function boardHtml(product) {
     const c = product.concept;
     const blocks = {};
     CONCEPT_BLOCKS.forEach((b) => {
-      blocks[b.key] = panel(b.title, textHtml(b.key, c[b.key], b.hint));
+      blocks[b.key] = panel(b.title, textHtml(b.key, c[b.key], b.hint), "", b.key);
     });
 
     return (
@@ -318,19 +379,21 @@ const Concept = (() => {
           '<p class="cpanel__hint">경쟁 키워드</p>' +
           keywordRows("market.rivals", c.market.rivals, "경쟁 키워드") +
           textHtml("market.note", c.market.note, "조사 출처 · 해석", "ctext--small"),
-        "cpanel--wide"
+        "cpanel--wide",
+        "market"
       ) +
 
-      panel("참고제품", rivalRows(product.id), "cpanel--wide") +
+      panel("참고제품", rivalRows(product.id), "cpanel--wide", "rivals") +
 
-      panel("상표 가능여부", checkHtml("trademark", c.trademark, "상표 가능여부")) +
-      panel("비포애프터 가능여부", checkHtml("beforeAfter", c.beforeAfter, "비포애프터 가능여부")) +
+      panel("상표 가능여부", checkHtml("trademark", c.trademark, "상표 가능여부"), "", "trademark") +
+      panel("비포애프터 가능여부", checkHtml("beforeAfter", c.beforeAfter, "비포애프터 가능여부"), "", "beforeAfter") +
 
       panel(
         "광고소재 예시",
         imageZone("ads.images", c.ads.images, "광고소재 넣기") +
           textHtml("ads.note", c.ads.note, "어떤 장면 · 어떤 카피로 갈지", "ctext--small"),
-        "cpanel--full"
+        "cpanel--full",
+        "ads"
       ) +
       "</div>" +
       "</div>"
@@ -446,7 +509,18 @@ const Concept = (() => {
       setActive(null);
       App.render();
     });
-    root.querySelector('[data-act="print"]').addEventListener("click", () => window.print());
+    root.querySelector('[data-act="print"]').addEventListener("click", () => {
+      preparePrint(root);
+      window.print();
+      /* afterprint 가 안 오는 브라우저가 있어 한 번 더 되돌린다 */
+      setTimeout(() => restorePrint(root), 1000);
+    });
+
+    /* Ctrl+P 로 눌러도 같아야 한다 */
+    const onBefore = () => preparePrint(root);
+    const onAfter = () => restorePrint(root);
+    window.addEventListener("beforeprint", onBefore);
+    window.addEventListener("afterprint", onAfter);
     root.querySelector('[data-act="rivals"]').addEventListener("click", () => {
       mode = "rivals";
       App.render();
