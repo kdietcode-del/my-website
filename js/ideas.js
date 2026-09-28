@@ -371,7 +371,11 @@ const Ideas = (() => {
       "<h2>신제품 아이디어</h2>" +
       '<p class="view__sub">떠오른 제품 아이디어와 참고할 타사 사례를 아무렇게나 던져 두는 판입니다. 쓸 만해지면 런칭 준비로 넘기세요.</p>' +
       "</div>" +
+      '<div class="view__actions">' +
+      /* 화면을 안 쓰고 손으로 채우고 싶을 때. 기획서와 같은 일곱 칸이다. */
+      '<a class="btn btn--ghost" href="%EC%8B%A0%EC%A0%9C%ED%92%88-%EA%B8%B0%ED%9A%8D-%EC%9E%A5%ED%91%9C.docx" download>기획 장표 양식 (Word)</a>' +
       '<button type="button" class="btn btn--primary" data-act="create">+ 아이디어 추가</button>' +
+      "</div>" +
       "</div>" +
       '<div class="toolbar">' +
       '<div class="segmented" role="group" aria-label="구분 필터">' + segments + "</div>" +
