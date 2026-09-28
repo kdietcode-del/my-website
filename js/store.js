@@ -219,6 +219,7 @@ const Store = (() => {
       );
       idea.category = migrateCategory(idea.category);
       idea.plan = normalizePlan(idea.plan);
+      seedPlanFromIdea(idea);
       /* seedId 는 나중에 생긴 필드다. 이름으로 되찾아 붙여 두지 않으면
          '이미 있는 항목' 검사가 빗나가 기본 목록이 한 번 더 들어간다. */
       if (!idea.seedId) {
@@ -258,6 +259,11 @@ const Store = (() => {
     );
 
     mergeConceptRivals();
+
+    if (seededSome) {
+      seededSome = false;
+      save();
+    }
   }
 
   /* 컨셉보드에 적어 둔 경쟁제품과 경쟁제품 참고보드가 따로 놀았다. 같은 제품을
@@ -453,6 +459,46 @@ const Store = (() => {
         },
       },
     };
+  }
+
+  /* 예전에 적어 둔 내용을 기획서 칸으로 옮겨 담는다.
+
+     아이디어 카드에는 컨셉 · 성분 · 광고 소구점 · 참고 레퍼런스가 있었다.
+     기획서 일곱 칸과 뜻이 겹치는 것이 있어, 한 번만 베껴 넣는다. 옮기는
+     것이 아니라 베끼는 것이라 카드 쪽 내용은 그대로 남는다.
+
+     이미 적혀 있는 칸은 건드리지 않는다. 한 번 베낀 아이디어는 다시 베끼지
+     않는다 — 지워 둔 칸이 되살아나면 안 된다. */
+  /* 이번에 베낀 것이 있으면 정리가 끝난 뒤 한 번 저장한다. 저장하지 않으면
+     '한 번만' 이라는 표시가 남지 않아, 지워 둔 칸이 다음에 되살아난다. */
+  let seededSome = false;
+
+  function seedPlanFromIdea(idea) {
+    if (idea.planSeeded) return;
+    idea.planSeeded = true;
+    seededSome = true;
+
+    const plan = idea.plan;
+    const put = (part, value) => {
+      if (part && !part.text && value) part.text = String(value).trim();
+    };
+
+    /* 컨셉은 '이 제품을 한 문장으로' 다. 기획서의 첫 줄과 같은 것을 묻는다. */
+    put(plan.oneLine, idea.efficacy);
+
+    /* 성분은 해결방안의 실체다 — 무엇으로 그 문제를 푸는가. */
+    const solution = plan.steps.solution;
+    if (!solution.ours && idea.ingredients) solution.ours = String(idea.ingredients).trim();
+
+    /* 광고 소구점은 대개 '어떤 장면을 보여줄 것인가' 로 적혀 있다. */
+    const ad = plan.steps.ad;
+    if (idea.usp && ad.plans[0] && !ad.plans[0].ba) ad.plans[0].ba = String(idea.usp).trim();
+
+    /* 참고 레퍼런스는 문서가 2단계에서 요구하는 '참고 자료' 와 같다. */
+    const refs = (idea.refs || [])
+      .map((ref) => ({ label: str((ref || {}).label), url: str((ref || {}).url) }))
+      .filter((ref) => ref.label || ref.url);
+    if (refs.length && !plan.steps.visual.refs.length) plan.steps.visual.refs = refs;
   }
 
   /* "steps.market.rows" 처럼 점으로 이어진 길을 따라가 값을 바꾼다. */

@@ -165,12 +165,13 @@ a { color: var(--accent); }
 
 .brand { display: flex; align-items: center; gap: 10px; }
 
+/* 탭 아이콘과 같은 그림을 쓴다. 두 군데 로고가 다르면 같은 곳으로 안 읽힌다. */
 .brand__mark {
   width: 26px;
   height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(140deg, var(--accent), var(--cat-body));
+  border-radius: 7px;
   flex: none;
+  display: block;
 }
 
 .brand__text { display: flex; flex-direction: column; line-height: 1.25; }
