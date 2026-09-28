@@ -511,15 +511,27 @@ a { color: var(--accent); }
 .product-card { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; gap: 12px; }
 .product-card:hover { border-color: var(--accent); box-shadow: var(--shadow); }
 .product-card__shot {
+  position: relative;
   display: grid;
   place-items: center;
-  aspect-ratio: 4 / 3;
+  /* 화장품 용기는 길쭉하다. 가로로 넓은 칸에 담으면 양옆만 비고 사진은 작아진다. */
+  aspect-ratio: 4 / 5;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   overflow: hidden;
 }
 /* 화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다. */
-.product-card__shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* aspect-ratio 로 높이를 정한 칸 안에서는 자식의 % 높이가 풀리지 않아
+   사진이 칸보다 커지고 아래가 잘린다. 사진을 칸에 딱 붙여 깔면(inset: 0)
+   높이가 분명해져 어디서나 통째로 들어간다. */
+.product-card__shot img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
 .product-card__blank { font-size: 1.75rem; opacity: 0.25; }
 .product-card .card__title { font-size: 1rem; }
 
@@ -1976,7 +1988,14 @@ body.is-locked #settings-btn { display: none; }
   overflow: hidden;
 }
 /* 화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다 */
-.photos .czone__zoom img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.photos .czone__zoom img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
 
 .photo__add {
   display: flex;
@@ -2006,10 +2025,12 @@ body.is-locked #settings-btn { display: none; }
 }
 
 @media (max-width: 900px) {
+  /* 세로로 긴 화장품 병이라 네모 칸에 담으면 위아래만 비고 사진이 작아진다.
+     좁은 화면에서도 3:4 를 지키고, 한 장일 때 크게 보이도록 한 줄에 하나씩. */
   .pdtop > .photos .czone__grid,
-  .ptop > .photos .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .ptop > .photos .czone__grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
   .pdtop > .photos .czone__item,
-  .ptop > .photos .czone__item { aspect-ratio: 1; }
+  .ptop > .photos .czone__item { aspect-ratio: 3 / 4; }
 }
 
 /* ============================================================

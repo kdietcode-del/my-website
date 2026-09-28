@@ -416,8 +416,17 @@ const App = (() => {
       },
     });
 
-    const settingsBtn = document.getElementById("settings-btn");
-    if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
+    /* 설정은 화면에 단추를 두지 않는다. 백업 · 서버 주소 · 비밀번호처럼
+       잘못 누르면 곤란한 것들이 들어 있다. 주소 끝에 #설정(또는
+       #settings)을 붙였을 때만 열린다. */
+    function openSettingsFromHash() {
+      const hash = decodeURIComponent(location.hash || "").replace("#", "");
+      if (hash !== "설정" && hash !== "settings") return;
+      history.replaceState(null, "", location.pathname + location.search);
+      openSettings();
+    }
+    window.addEventListener("hashchange", openSettingsFromHash);
+    openSettingsFromHash();
 
     const importInput = document.getElementById("import-input");
     if (importInput) {
