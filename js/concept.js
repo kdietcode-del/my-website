@@ -56,10 +56,56 @@ const Concept = (() => {
      마지막 달 실제값에 맞춰 편 값이다. */
   const TREND_MONTHS = 12;
 
+  /* 오래된 달부터 차례로, 끝이 이번 달 */
+  function monthKeys(count) {
+    const now = new Date();
+    const out = [];
+    for (let back = count - 1; back >= 0; back -= 1) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+      out.push(d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0"));
+    }
+    return out;
+  }
+
+  /* 붙여넣은 숫자 뭉치를 칸별로 쪼갠다.
+
+     '1,200' 의 쉼표는 자릿수 구분이지 칸 구분이 아니다. 무턱대고 쉼표로
+     자르면 1 과 200 두 칸이 된다. 그래서 줄바꿈·탭이 있으면 그것으로 자르고,
+     없으면 쉼표가 천 단위인지부터 본다. */
+  function splitNumbers(text) {
+    const raw = String(text || "");
+    let pieces;
+    if (/[\r\n\t]/.test(raw)) {
+      pieces = raw.split(/[\r\n\t]+/);
+    } else if (/,\d{3}(?!\d)/.test(raw)) {
+      pieces = raw.split(/\s+/);
+    } else {
+      pieces = raw.split(/[,;\s]+/);
+    }
+    return pieces.map((piece) => piece.replace(/[^0-9]/g, "")).filter((piece) => piece !== "");
+  }
+
+  /* 손으로 적은 숫자를 막대가 읽을 수 있는 모양으로 바꾼다. 비율은 가장 큰
+     달을 100 으로 두고 계산한다. 어디서 온 값인지 표시를 남긴다 — 가져온
+     값과 적어 넣은 값이 같아 보이면 안 된다. */
+  function trendFromCounts(counts) {
+    const keys = monthKeys(counts.length);
+    const top = Math.max.apply(null, counts.map((c) => c || 0));
+    if (!top) return [];
+    return counts.map((count, i) => ({
+      period: keys[i],
+      count: count || 0,
+      ratio: Math.round(((count || 0) / top) * 100),
+      manual: true,
+    }));
+  }
+
   function sparkline(trend) {
-    if (!trend || trend.length < 2) return "";
+    if (!trend || trend.length < 2) {
+      return '<span class="spark__add">＋ 추이</span>';
+    }
     const top = Math.max.apply(null, trend.map((p) => p.ratio || 0));
-    if (!top) return "";
+    if (!top) return '<span class="spark__add">＋ 추이</span>';
     const bars = trend
       .map((point) => {
         const height = Math.max(2, Math.round(((point.ratio || 0) / top) * 100));
@@ -72,11 +118,13 @@ const Concept = (() => {
         );
       })
       .join("");
+    const hand = trend.some((p) => p.manual);
     return (
       '<span class="spark" aria-label="' +
       UI.escapeHtml(trend[0].period + " 부터 " + trend[trend.length - 1].period + " 까지 검색 추이") +
       '">' + bars + "</span>" +
-      '<span class="spark__cap">' + trend.length + "개월</span>"
+      '<span class="spark__cap">' + trend.length + "개월" +
+      (hand ? ' <span class="spark__hand">직접 입력</span>' : "") + "</span>"
     );
   }
 
@@ -89,7 +137,8 @@ const Concept = (() => {
       '" placeholder="' + UI.escapeHtml(placeholder || "키워드") + '" aria-label="키워드">' +
       '<input type="text" class="input krow__count" value="' + UI.escapeHtml(row.count || "") +
       '" placeholder="검색량" aria-label="월 검색량" inputmode="numeric">' +
-      '<span class="krow__trend" data-krow-trend>' + sparkline(trend) + "</span>" +
+      '<button type="button" class="krow__trend" data-krow-trend ' +
+      'title="눌러서 월별 검색량 적기">' + sparkline(trend) + "</button>" +
       '<button type="button" class="icon-btn" data-krow-look aria-label="검색량 다시 가져오기" ' +
       'title="검색량 다시 가져오기">↻</button>' +
       '<button type="button" class="icon-btn" data-krow-remove aria-label="이 줄 삭제">✕</button>' +
@@ -498,8 +547,13 @@ const Concept = (() => {
           (data) => {
             row.classList.remove("krow--busy");
             if (data.total != null) count.value = String(data.total);
-            row.dataset.trend = (data.trend || []).length ? JSON.stringify(data.trend) : "";
-            trend.innerHTML = sparkline(data.trend || []);
+            /* 가져온 추이가 없으면 손으로 적어 둔 값을 그대로 둔다.
+               빈손으로 돌아왔다고 사람이 적은 걸 지우면 안 된다. */
+            const had = trendOf(row);
+            const fetched = data.trend || [];
+            const keep = fetched.length ? fetched : had;
+            row.dataset.trend = keep.length ? JSON.stringify(keep) : "";
+            trend.innerHTML = sparkline(keep);
 
             /* 막대가 왜 안 나오는지 말해 주지 않으면, 눌러 놓고 고장인 줄
                안다. 직접 누른 때만 알린다 — 줄마다 뜨면 잔소리가 된다. */
@@ -508,8 +562,8 @@ const Concept = (() => {
             if (overwrite && data.total == null) {
               notes.push("검색광고에 이 키워드 기록이 없습니다.");
             }
-            if (overwrite && !(data.trend || []).length) {
-              notes.push("추이 막대는 검색어트렌드 열쇠를 넣어야 나옵니다.");
+            if (overwrite && !fetched.length && !had.length) {
+              notes.push("월별 추이는 검색광고가 주지 않습니다. 막대를 눌러 직접 적어 넣으세요.");
             }
             if (notes.length) {
               trend.insertAdjacentHTML(
@@ -524,6 +578,73 @@ const Concept = (() => {
             trend.innerHTML = '<span class="spark__cap">' + UI.escapeHtml(error.message) + "</span>";
           }
         );
+      }
+
+      /* 월별 검색량을 손으로 적는 창.
+
+         검색광고는 지난 한 달 숫자만 준다. 여러 달치는 API 로 오지 않는다.
+         그래서 화면에서 보고 옮겨 적을 길을 연다. 첫 칸에 숫자 열두 개를
+         한꺼번에 붙여넣으면 알아서 나눠 담는다 — 표에서 세로로 복사해 오면
+         줄바꿈으로 붙는다. */
+      function openTrend(row) {
+        const word = row.querySelector(".krow__word").value.trim() || "이 키워드";
+        const saved = trendOf(row);
+        const keys = monthKeys(TREND_MONTHS);
+        const byPeriod = {};
+        saved.forEach((p) => {
+          byPeriod[p.period] = p.count;
+        });
+
+        const cells = keys
+          .map(
+            (key, i) =>
+              '<label class="tmonth"><span>' + key + "</span>" +
+              '<input type="text" class="input" inputmode="numeric" data-tm="' + i +
+              '" value="' + UI.escapeHtml(byPeriod[key] != null ? String(byPeriod[key]) : "") +
+              '" aria-label="' + key + " 검색량\"></label>"
+          )
+          .join("");
+
+        const node = UI.openModal(
+          word + " — 월별 검색량",
+          '<p class="settings__note">네이버 검색광고나 블랙키위 화면에서 본 월별 숫자를 옮겨 적으세요. ' +
+            "첫 칸에 숫자 여러 개를 한꺼번에 붙여넣으면 아래로 자동으로 채워집니다. " +
+            "오래된 달이 왼쪽 위입니다.</p>" +
+            '<div class="tmonths">' + cells + "</div>",
+          '<button type="button" class="btn btn--ghost" data-trend-clear>비우기</button>' +
+            '<button type="button" class="btn btn--ghost" data-close>닫기</button>' +
+            '<button type="button" class="btn btn--primary" data-trend-save>저장</button>'
+        );
+        if (!node) return;
+
+        const boxes = Array.from(node.querySelectorAll("[data-tm]"));
+        boxes[0].focus();
+
+        /* 표에서 세로로 복사해 온 숫자 뭉치를 나눠 담는다. */
+        node.addEventListener("paste", (event) => {
+          const from = boxes.indexOf(event.target);
+          if (from < 0) return;
+          const text = (event.clipboardData || window.clipboardData).getData("text/plain") || "";
+          const numbers = splitNumbers(text);
+          if (numbers.length < 2) return;
+          event.preventDefault();
+          numbers.forEach((value, i) => {
+            if (boxes[from + i]) boxes[from + i].value = value;
+          });
+        });
+
+        node.querySelector("[data-trend-clear]").addEventListener("click", () => {
+          boxes.forEach((box) => (box.value = ""));
+        });
+
+        node.querySelector("[data-trend-save]").addEventListener("click", () => {
+          const counts = boxes.map((box) => Number(box.value.replace(/[^0-9]/g, "")) || 0);
+          const made = counts.some((c) => c > 0) ? trendFromCounts(counts) : [];
+          row.dataset.trend = made.length ? JSON.stringify(made) : "";
+          row.querySelector("[data-krow-trend]").innerHTML = sparkline(made);
+          save();
+          UI.closeModal();
+        });
       }
 
       wrap.addEventListener("change", (event) => {
@@ -541,6 +662,11 @@ const Concept = (() => {
         }
         if (event.target.matches("[data-krow-look]")) {
           look(event.target.closest(".krow"), true);
+          return;
+        }
+        const trendBtn = event.target.closest("[data-krow-trend]");
+        if (trendBtn) {
+          openTrend(trendBtn.closest(".krow"));
           return;
         }
         if (event.target.matches("[data-krow-remove]")) {

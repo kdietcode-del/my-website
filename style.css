@@ -1113,10 +1113,51 @@ a { color: var(--accent); }
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
   font-size: 0.6875rem;
   color: var(--muted);
+  cursor: pointer;
+  text-align: left;
 }
-.krow__trend:empty { display: none; }
+.krow__trend:hover { border-color: var(--grid); background: var(--surface-2); }
+.krow__trend:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* 아직 안 적은 줄. 눈에 띄면 잔소리라, 손을 올렸을 때만 진해진다. */
+.spark__add { opacity: 0.45; white-space: nowrap; }
+.krow:hover .spark__add { opacity: 1; color: var(--accent); }
+
+/* 가져온 값과 적어 넣은 값은 구분돼야 한다. 같아 보이면 추정을 사실로 읽는다. */
+.spark__hand {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--grid);
+  font-size: 0.625rem;
+}
+
+/* 월별 검색량 적는 창 */
+.tmonths {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.tmonth { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; align-items: center; }
+.tmonth > span { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tmonth .input {
+  min-width: 0;
+  max-width: none;
+  flex: none;
+  padding: 6px 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .spark {
   display: flex;
   align-items: flex-end;
