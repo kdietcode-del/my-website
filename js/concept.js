@@ -260,9 +260,11 @@ const Concept = (() => {
       .map(
         (image, index) =>
           '<div class="czone__item" data-image-index="' + index + '">' +
+          '<button type="button" class="czone__zoom" data-image-zoom aria-label="크게 보기">' +
           (image.url
             ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
             : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">') +
+          "</button>" +
           '<button type="button" class="img-thumb__x" data-image-remove aria-label="사진 빼기">✕</button>' +
           "</div>"
       )
@@ -889,9 +891,18 @@ const Concept = (() => {
       });
 
       grid.addEventListener("click", (event) => {
-        if (!event.target.matches("[data-image-remove]")) return;
         const item = event.target.closest(".czone__item");
+        if (!item) return;
         const index = Number(item.dataset.imageIndex);
+
+        /* 사진을 누르면 크게 뜨고, 거기서 내려받을 수 있다 */
+        if (event.target.closest("[data-image-zoom]")) {
+          const c = Store.getConcept(product.id);
+          const list = path === "images" ? c.images : c.ads.images;
+          if (list[index]) UI.openImage(list[index], { title: product.name, name: product.name });
+          return;
+        }
+        if (!event.target.matches("[data-image-remove]")) return;
         const saved = Store.getConcept(product.id);
         const list = (path === "images" ? saved.images : saved.ads.images).slice();
         list.splice(index, 1);

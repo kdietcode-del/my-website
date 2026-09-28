@@ -7,7 +7,7 @@
    맨 위에 한 줄 요약과 일곱 줄짜리 제출 양식을 두고, 아래에 각 단계의
    근거를 펼쳐 둔다. 요약만 보면 A4 한 장이고, 펼치면 조사 내용이다.
 
-   판정은 대표가 항목별로 내린다. 그래서 각 단계에 판정 칸이 붙어 있다.
+   일곱 단계 어디에도 안 들어가는 것은 아래 디벨롭 필요사항에 적는다.
    ============================================================ */
 
 const Plan = (() => {
@@ -278,11 +278,6 @@ const Plan = (() => {
 
   /* ---------- 한 장 짜기 ---------- */
 
-  function verdictChip(value) {
-    const found = PLAN_VERDICTS.find((v) => v.key === (value || "")) || PLAN_VERDICTS[0];
-    return '<span class="pv pv--' + found.tone + '">' + UI.escapeHtml(found.label) + "</span>";
-  }
-
   function summaryTable(plan) {
     const rows = PLAN_STEPS.map((step) => {
       const s = plan.steps[step.key];
@@ -293,12 +288,11 @@ const Plan = (() => {
         '<td class="psum__ask">' + UI.escapeHtml(step.short) + "</td>" +
         '<td><a class="psum__jump" href="#pstep-' + step.key + '">' +
         (answered ? UI.escapeHtml(answered) : '<span class="muted">아직 답이 없습니다</span>') +
-        "</a></td>" +
-        '<td class="psum__v">' + verdictChip(s.verdict) + "</td></tr>"
+        "</a></td></tr>"
       );
     }).join("");
     return (
-      '<table class="ptable psum"><thead><tr><th>STEP</th><th>한 줄 질문</th><th>답변</th><th>판정</th></tr></thead>' +
+      '<table class="ptable psum"><thead><tr><th>STEP</th><th>한 줄 질문</th><th>답변</th></tr></thead>' +
       "<tbody>" + rows + "</tbody></table>"
     );
   }
@@ -310,9 +304,7 @@ const Plan = (() => {
       '<div><h3 class="pstep__title"><span class="pnum">' + step.n + "</span>" +
       UI.escapeHtml(step.title) + "</h3>" +
       '<p class="pstep__ask">' + UI.escapeHtml(step.ask) + "</p></div>" +
-      '<div class="pstep__tools">' +
-      pick("steps." + step.key + ".verdict", s.verdict, PLAN_VERDICTS, step.title + " 판정") +
-      "</div></header>" +
+      "</header>" +
       '<p class="pstep__need">' + UI.escapeHtml(step.need) + " 로 답합니다</p>" +
       field("한 줄 답변", text("steps." + step.key + ".answer", s.answer, step.short),
         "위의 제출 양식에 그대로 들어갑니다") +
@@ -321,8 +313,8 @@ const Plan = (() => {
     );
   }
 
-  /* 일곱 단계 어디에도 안 들어가는 것들. 판정표 바로 아래에 둔다 — 무엇이
-     아직 안 정해졌는지가 판정과 나란히 보여야 한다. */
+  /* 일곱 단계 어디에도 안 들어가는 것들. 요약표 바로 아래에 둔다 — 무엇이
+     아직 안 정해졌는지가 답변과 나란히 보여야 한다. */
   function developHtml(plan) {
     return (
       '<section class="pdev">' +
@@ -341,9 +333,11 @@ const Plan = (() => {
       .map(
         (image, index) =>
           '<div class="czone__item" data-image-index="' + index + '">' +
+          '<button type="button" class="czone__zoom" data-image-zoom aria-label="크게 보기">' +
           (image.url
             ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
             : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">') +
+          "</button>" +
           '<button type="button" class="img-thumb__x" data-image-remove aria-label="사진 빼기">✕</button>' +
           "</div>"
       )
@@ -481,8 +475,17 @@ const Plan = (() => {
     });
 
     grid.addEventListener("click", (event) => {
+      const item = event.target.closest(".czone__item");
+      if (!item) return;
+      const index = Number(item.dataset.imageIndex);
+
+      /* 사진을 누르면 크게 뜨고, 거기서 내려받을 수 있다 */
+      if (event.target.closest("[data-image-zoom]")) {
+        const image = listOf()[index];
+        if (image) UI.openImage(image, { title: idea.name, name: idea.name });
+        return;
+      }
       if (!event.target.matches("[data-image-remove]")) return;
-      const index = Number(event.target.closest(".czone__item").dataset.imageIndex);
       const list = listOf();
       list.splice(index, 1);
       Store.updateIdea(idea.id, { images: list });

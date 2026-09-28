@@ -876,19 +876,56 @@ const UI = (() => {
     markBrokenImages(scope);
   }
 
-  function openImage(image) {
+  /* 크게 보기. 내려받는 단추도 같이 둔다 — 보드에 올려 둔 그림을 다시 쓰려고
+     원본 파일을 찾아 헤매는 일이 잦다.
+
+     브라우저 안에 담아 둔 그림은 바로 내려받아진다. 남의 사이트 주소로 걸어
+     둔 그림은 브라우저가 내려받게 두지 않으므로, 새 탭에서 열어 준다. */
+  function openImage(image, options) {
+    const o = options || {};
     const body = image.url
       ? '<img class="lightbox__img" src="' + escapeHtml(safeUrl(image.url)) + '" alt="">'
       : '<img class="lightbox__img" data-img-id="' + escapeHtml(image.id) + '" alt="">';
     const node = openModal(
-      "이미지",
+      o.title || "이미지",
       '<div class="lightbox">' + body + "</div>",
-      '<button type="button" class="btn btn--ghost" data-close>닫기</button>'
+      '<a class="btn btn--primary" data-image-save>저장</a>' +
+        '<button type="button" class="btn btn--ghost" data-close>닫기</button>'
     );
-    if (node) {
-      Images.hydrate(node);
-      markBrokenImages(node);
+    if (!node) return;
+
+    Images.hydrate(node);
+    markBrokenImages(node);
+
+    const img = node.querySelector(".lightbox__img");
+    const save = node.querySelector("[data-image-save]");
+    const base = String(o.name || "이미지").replace(/[\\/:*?"<>|]/g, "").slice(0, 60) || "이미지";
+
+    function point() {
+      const src = img.getAttribute("src") || "";
+      if (!src) {
+        save.hidden = true;
+        return;
+      }
+      save.hidden = false;
+      save.href = src;
+      if (/^(blob:|data:)/.test(src)) {
+        const ext = /^data:image\/png/.test(src) ? ".png" : ".jpg";
+        save.setAttribute("download", base + ext);
+        save.removeAttribute("target");
+        save.textContent = "저장";
+      } else {
+        save.removeAttribute("download");
+        save.target = "_blank";
+        save.rel = "noopener noreferrer";
+        save.textContent = "새 탭에서 열기";
+      }
     }
+
+    /* 브라우저 안에 담아 둔 그림은 주소가 나중에 붙는다. */
+    point();
+    img.addEventListener("load", point);
+    setTimeout(point, 400);
   }
 
   /* ---------- 확인 대화상자 ---------- */
