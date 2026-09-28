@@ -25,10 +25,12 @@ const App = (() => {
   }
 
   /* 지금 진행 중인 일이 먼저 오고, 아직 시작 안 한 아이디어가 마지막에 온다. */
+  /* short 는 좁은 화면에서만 쓴다. 긴 이름 그대로 두면 탭이 화면을 넘어
+     옆으로 밀어야 보인다 — 어떤 탭이 있는지조차 모르게 된다. */
   const TABS = [
-    { key: "pipeline", label: "🚀 제품 런칭 상황보드", view: () => Pipeline },
-    { key: "concept", label: "🎨 제품 컨셉보드", view: () => Concept },
-    { key: "ideas", label: "💡 신제품 아이디어", view: () => Ideas },
+    { key: "pipeline", label: "🚀 제품 런칭 상황보드", short: "🚀 런칭", view: () => Pipeline },
+    { key: "concept", label: "🎨 제품 컨셉보드", short: "🎨 컨셉", view: () => Concept },
+    { key: "ideas", label: "💡 신제품 아이디어", short: "💡 아이디어", view: () => Ideas },
   ];
 
   let activeTab = "pipeline";
@@ -56,7 +58,9 @@ const App = (() => {
         (tab) =>
           '<button type="button" role="tab" class="tab' + (tab.key === activeTab ? " tab--on" : "") +
           '" data-tab="' + tab.key + '" aria-selected="' + (tab.key === activeTab) + '">' +
-          UI.escapeHtml(tab.label) + "</button>"
+          '<span class="tab__long">' + UI.escapeHtml(tab.label) + "</span>" +
+          '<span class="tab__short">' + UI.escapeHtml(tab.short || tab.label) + "</span>" +
+          "</button>"
       ).join("");
       nav.querySelectorAll("[data-tab]").forEach((btn) => {
         btn.addEventListener("click", () => go(btn.dataset.tab));

@@ -1980,9 +1980,6 @@ body.is-locked #settings-btn { display: none; }
 }
 .photo__add span { font-size: 1.25rem; line-height: 1; }
 .photo__add:hover { border-color: var(--accent); color: var(--accent); }
-/* 이미 사진이 있으면 한 줄짜리 얇은 칸으로 줄인다 — 사진이 주인공이다 */
-.photo__add--more { aspect-ratio: auto; padding: 8px; opacity: 0.6; }
-.photo__add--more:hover { opacity: 1; }
 
 /* 런칭 보드는 사진 칸을 흰 카드 안에 넣는다 */
 .pdshot, .pdtop > .photos {
@@ -1997,4 +1994,81 @@ body.is-locked #settings-btn { display: none; }
   .ptop > .photos .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   .pdtop > .photos .czone__item,
   .ptop > .photos .czone__item { aspect-ratio: 1; }
+}
+
+/* ============================================================
+   좁은 화면 — 휴대폰에서 보기
+   글자를 줄이고, 옆으로 미는 것을 없앤다. 옆으로 밀어야 보이는 것은
+   대개 못 보고 지나간다.
+   ============================================================ */
+
+.tab__short { display: none; }
+
+@media (max-width: 700px) {
+  /* rem 으로 짜 둔 것이 한꺼번에 줄어든다 */
+  html { font-size: 14.5px; }
+
+  /* 탭 — 긴 이름 대신 짧은 이름. 세 개가 한 화면에 들어와야 어떤 탭이
+     있는지 알 수 있다. */
+  .tab__long { display: none; }
+  .tab__short { display: inline; }
+  .tabs { overflow-x: visible; gap: 2px; }
+  .tab { padding: 10px 10px; font-size: 0.875rem; white-space: nowrap; }
+
+  /* 머리띠 */
+  .topbar__inner { padding: 10px 14px; gap: 8px; }
+  .brand__text strong { font-size: 0.9375rem; }
+  .brand__text span { display: none; }
+  .topbar .btn { padding: 6px 9px; font-size: 0.75rem; }
+
+  .view { padding: 16px 14px 48px; }
+  .view__head h2 { font-size: 1.25rem; }
+  .view__sub { font-size: 0.8125rem; }
+
+  .summary__value { font-size: 2rem; }
+  .cboard__name { font-size: 1.375rem; }
+  .psheet__name { font-size: 1.375rem; }
+  .card__title { font-size: 0.9375rem; }
+  .stage__name { font-size: 0.9375rem; }
+
+  /* 참고제품 표 — 900px 짜리 표를 손가락으로 밀게 하지 않는다.
+     한 줄이 카드 한 장이 되고, 칸마다 이름표가 앞에 붙는다. */
+  .table-wrap { overflow-x: visible; }
+  .table { min-width: 0; display: block; }
+  .table thead { display: none; }
+  .table tbody { display: block; }
+  .table tr {
+    display: block;
+    border: 1px solid var(--grid);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+  .table tr:hover td { background: none; }
+  .table td {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    border: none;
+    padding: 3px 0;
+  }
+  .table td[data-th]::before {
+    content: attr(data-th);
+    flex: none;
+    width: 72px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  /* 썸네일과 제품명은 이름표 없이 위에 크게 */
+  .table td.cell-thumb { width: auto; padding-bottom: 8px; }
+  .table td:nth-child(2) { display: block; padding-bottom: 6px; }
+  .table .cell-strong { font-size: 1rem; }
+  .table .cell-memo { max-width: none; }
+  .table .actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+  .table .actions .btn { margin-left: 0; }
+}
+
+@media (max-width: 380px) {
+  .tab { padding: 10px 7px; font-size: 0.8125rem; }
 }

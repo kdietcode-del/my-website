@@ -517,13 +517,12 @@ const UI = (() => {
       )
       .join("");
 
-    /* 사진이 없으면 빈 칸이 곧 넣는 자리다. 있으면 뒤에 작게 붙는다. */
-    const add =
-      '<button type="button" class="photo__add' + (list.length ? " photo__add--more" : "") +
-      '" data-image-add aria-label="' + escapeHtml(label) + '">' +
-      '<span aria-hidden="true">＋</span>' +
-      (list.length ? "" : escapeHtml(label)) +
-      "</button>";
+    /* 사진이 없을 때만 넣는 자리를 보여 준다. 이미 있으면 사진을 눌러
+       바꾸면 되므로, 그 아래에 단추가 또 있을 이유가 없다. */
+    const add = list.length
+      ? ""
+      : '<button type="button" class="photo__add" data-image-add aria-label="' +
+        escapeHtml(label) + '"><span aria-hidden="true">＋</span>' + escapeHtml(label) + "</button>";
 
     return (
       '<div class="photos czone" data-photos>' +

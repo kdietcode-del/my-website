@@ -192,15 +192,15 @@ const Competitors = (() => {
           '<span class="cell-sub">' + UI.escapeHtml(c.name) + "</span>" +
           (product ? '<span class="cell-link">vs ' + UI.escapeHtml(product.name) + "</span>" : "") +
           "</td>" +
-          '<td class="num">' + UI.escapeHtml(UI.formatPrice(c.price)) + "</td>" +
-          "<td>" + UI.escapeHtml(c.volume || "—") + "</td>" +
-          "<td>" + UI.escapeHtml(c.ingredients || "—") + "</td>" +
-          "<td>" + UI.escapeHtml(c.claims || "—") + "</td>" +
-          "<td>" + UI.escapeHtml(c.channel || "—") + "</td>" +
-          "<td>" +
+          '<td class="num" data-th="가격">' + UI.escapeHtml(UI.formatPrice(c.price)) + "</td>" +
+          '<td data-th="용량">' + UI.escapeHtml(c.volume || "—") + "</td>" +
+          '<td data-th="핵심 성분">' + UI.escapeHtml(c.ingredients || "—") + "</td>" +
+          '<td data-th="소구 포인트">' + UI.escapeHtml(c.claims || "—") + "</td>" +
+          '<td data-th="채널">' + UI.escapeHtml(c.channel || "—") + "</td>" +
+          '<td data-th="참고 영상">' +
           (c.video ? '<span class="cell-memo">' + UI.escapeHtml(c.video) + "</span>" : '<span class="muted">—</span>') +
           "</td>" +
-          "<td>" +
+          '<td data-th="메모">' +
           (c.memo ? '<span class="cell-memo">' + UI.escapeHtml(c.memo) + "</span>" : '<span class="muted">—</span>') +
           "</td>" +
           '<td class="actions">' +
