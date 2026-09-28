@@ -219,19 +219,49 @@ async function fetchSearchAd(env, word) {
 }
 
 /* 최근 6개월 추이 */
+/* 검색어트렌드를 어디서 받아 오는지.
+
+   네이버가 2026년 7월 31일부로 개발자센터 신규 발급을 막고 NAVER API HUB 로
+   창구를 옮겼다. 주소도 인증 헤더도 다르다. 예전에 받아 둔 열쇠는 아직
+   살아 있으므로, 둘 중 들어 있는 쪽을 쓴다. HUB 를 먼저 본다. */
+function trendTarget(env) {
+  if (env.NAVER_HUB_KEY_ID && env.NAVER_HUB_KEY) {
+    return {
+      where: "API HUB",
+      url: "https://naverapihub.apigw.ntruss.com/search-trend/v1/search",
+      headers: {
+        "X-NCP-APIGW-API-KEY-ID": env.NAVER_HUB_KEY_ID,
+        "X-NCP-APIGW-API-KEY": env.NAVER_HUB_KEY,
+        "Content-Type": "application/json",
+      },
+    };
+  }
+  if (env.NAVER_CLIENT_ID && env.NAVER_CLIENT_SECRET) {
+    return {
+      where: "데이터랩",
+      url: "https://openapi.naver.com/v1/datalab/search",
+      headers: {
+        "X-Naver-Client-Id": env.NAVER_CLIENT_ID,
+        "X-Naver-Client-Secret": env.NAVER_CLIENT_SECRET,
+        "Content-Type": "application/json",
+      },
+    };
+  }
+  return null;
+}
+
 async function fetchTrend(env, word) {
+  const target = trendTarget(env);
+  if (!target) return [];
+
   const now = new Date();
   /* 오늘 것은 아직 안 쌓였을 수 있어 어제까지만 본다. */
   const end = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 5, 1));
 
-  const response = await fetch("https://openapi.naver.com/v1/datalab/search", {
+  const response = await fetch(target.url, {
     method: "POST",
-    headers: {
-      "X-Naver-Client-Id": env.NAVER_CLIENT_ID,
-      "X-Naver-Client-Secret": env.NAVER_CLIENT_SECRET,
-      "Content-Type": "application/json",
-    },
+    headers: target.headers,
     body: JSON.stringify({
       startDate: ymd(start),
       endDate: ymd(end),
@@ -240,7 +270,7 @@ async function fetchTrend(env, word) {
     }),
   });
   if (!response.ok) {
-    throw new Error("데이터랩 API 가 " + response.status + " 를 돌려줬습니다. 열쇠 두 개를 확인해 주세요.");
+    throw new Error(target.where + " 가 " + response.status + " 를 돌려줬습니다. 열쇠 두 개를 확인해 주세요.");
   }
 
   const data = await response.json();
@@ -254,7 +284,7 @@ async function keywordResponse(request, env, origin) {
   if (word.length > 40) return json({ ok: false, error: "키워드가 너무 깁니다." }, 400, origin);
 
   const hasAd = env.NAVER_AD_API_KEY && env.NAVER_AD_SECRET_KEY && env.NAVER_AD_CUSTOMER_ID;
-  const hasLab = env.NAVER_CLIENT_ID && env.NAVER_CLIENT_SECRET;
+  const hasLab = !!trendTarget(env);
   if (!hasAd && !hasLab) {
     return json(
       { ok: false, error: "네이버 열쇠가 아직 안 들어갔습니다. 워커 설정의 Variables and Secrets 를 확인해 주세요." },
