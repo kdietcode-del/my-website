@@ -1777,3 +1777,30 @@ body.is-locked #settings-btn { display: none; }
 .pdev__title { font-size: 0.9375rem; }
 .pdev__hint { font-size: 0.75rem; color: var(--muted); margin: 3px 0 10px; }
 .ptext--dev { background: var(--surface); min-height: 3.2em; }
+
+/* 제품 사진과 제출 양식을 나란히 — 어느 제품 얘기인지가 표보다 먼저 보여야
+   한다. 표는 그만큼 좁아지지만 답변 칸은 원래 한 줄이라 넉넉하다. */
+.ptop {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 28px;
+}
+.ptop .psum { margin-bottom: 0; }
+.pshot { gap: 6px; }
+.pshot .czone__grid { grid-template-columns: 1fr; gap: 6px; }
+.pshot .czone__item {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+/* 화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다 */
+.pshot .czone__item img { object-fit: contain; }
+.pshot .czone__add { padding: 10px; font-size: 0.75rem; }
+
+@media (max-width: 900px) {
+  .ptop { grid-template-columns: 1fr; gap: 14px; }
+  .pshot .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .pshot .czone__item { aspect-ratio: 1; }
+}

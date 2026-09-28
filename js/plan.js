@@ -333,6 +333,30 @@ const Plan = (() => {
     );
   }
 
+  /* 제품 사진. 아이디어 카드의 썸네일과 같은 기록을 본다 — 따로 두면
+     어느 쪽이 그 제품의 얼굴인지 갈린다. */
+  function ideaShots(idea) {
+    const images = idea.images || [];
+    const thumbs = images
+      .map(
+        (image, index) =>
+          '<div class="czone__item" data-image-index="' + index + '">' +
+          (image.url
+            ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
+            : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">') +
+          '<button type="button" class="img-thumb__x" data-image-remove aria-label="사진 빼기">✕</button>' +
+          "</div>"
+      )
+      .join("");
+    return (
+      '<div class="pshot czone" data-idea-images>' +
+      '<div class="czone__grid">' + thumbs + "</div>" +
+      '<button type="button" class="czone__add" data-image-add>' +
+      "<span>＋</span>제품 이미지 넣기</button>" +
+      "</div>"
+    );
+  }
+
   function sheetHtml(idea) {
     const plan = idea.plan;
     return (
@@ -344,7 +368,7 @@ const Plan = (() => {
       text("oneLine", plan.oneLine, "디톡스로 잘 알려진 레몬. 레몬 대명사인 미국산 레몬을 고농축으로 담은 식품", "ptext--lead") +
       '<p class="psheet__note">이 한 줄이 안 나오면 7단계를 채울 필요도 없습니다.</p>' +
       "</header>" +
-      summaryTable(plan) +
+      '<div class="ptop">' + ideaShots(idea) + summaryTable(plan) + "</div>" +
       developHtml(plan) +
       '<div class="psteps">' +
       PLAN_STEPS.map((step) => stepSection(step, plan.steps[step.key])).join("") +
@@ -411,8 +435,59 @@ const Plan = (() => {
       }
     });
 
+    bindIdeaShots(root, idea);
     bindRows(root, idea);
     bindShots(root, idea);
+  }
+
+  /* 제품 사진 — 아이디어가 들고 있는 것을 그대로 고친다 */
+  function bindIdeaShots(root, idea) {
+    const zone = root.querySelector("[data-idea-images]");
+    if (!zone) return;
+    const grid = zone.querySelector(".czone__grid");
+
+    const listOf = () => {
+      const found = Store.state.ideas.find((i) => i.id === idea.id);
+      return ((found || {}).images || []).slice();
+    };
+
+    function append(entries) {
+      Store.updateIdea(idea.id, { images: listOf().concat(entries) });
+      App.render();
+    }
+
+    function takeFiles(files) {
+      if (!files.length) return "";
+      Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
+        (results) => {
+          const made = results.filter(Boolean).map((r) => ({ id: r.id, url: "" }));
+          if (made.length) append(made);
+          const msg = document.querySelector("[data-ipick-msg]");
+          if (msg) msg.textContent = made.length + "장 담았습니다.";
+        }
+      );
+      return files.length + "장 줄이는 중…";
+    }
+
+    zone.querySelector("[data-image-add]").addEventListener("click", () => {
+      UI.openImagePicker({
+        title: "제품 이미지 넣기",
+        onFiles: takeFiles,
+        onUrl: (safe) => {
+          append([{ id: "url" + Date.now().toString(36), url: safe }]);
+          return "주소를 넣었습니다.";
+        },
+      });
+    });
+
+    grid.addEventListener("click", (event) => {
+      if (!event.target.matches("[data-image-remove]")) return;
+      const index = Number(event.target.closest(".czone__item").dataset.imageIndex);
+      const list = listOf();
+      list.splice(index, 1);
+      Store.updateIdea(idea.id, { images: list });
+      App.render();
+    });
   }
 
   /* 참고 영상처럼 줄을 늘렸다 줄였다 하는 칸 */
