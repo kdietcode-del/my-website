@@ -354,6 +354,9 @@ const UI = (() => {
     return out;
   }
 
+  /* 지금 창에 붙어 있는 붙여넣기 처리기. 새로 열 때 옛것을 뗀다. */
+  let pickerPaste = null;
+
   function openImagePicker(options) {
     const config = options || {};
     const onFiles = config.onFiles || function () {};
@@ -409,8 +412,13 @@ const UI = (() => {
     };
 
     /* 이 창 안에서 붙여넣으면 여기로 들어온다. 그림이면 그림으로, 이미지
-       주소를 복사해 왔으면 주소로 받는다. */
-    node.addEventListener("paste", (event) => {
+       주소를 복사해 왔으면 주소로 받는다.
+
+       처리기는 창(dialog) 에 붙인다. 안쪽 내용은 열 때마다 새로 그려지지만
+       창은 그대로 남는다. 떼지 않고 붙이기만 하면 지난번 창의 처리기가 같이
+       살아 있어, 아이디어에 넣은 그림이 컨셉보드에도 들어가 버린다. */
+    if (pickerPaste) node.removeEventListener("paste", pickerPaste);
+    pickerPaste = (event) => {
       const files = imageFilesFrom(event.clipboardData);
       if (files.length) {
         event.preventDefault();
@@ -422,7 +430,8 @@ const UI = (() => {
       if (!text) return;
       event.preventDefault();
       if (!takeUrl(text)) say("그림도 이미지 주소도 아닙니다.");
-    });
+    };
+    node.addEventListener("paste", pickerPaste);
 
     drop.addEventListener("dragover", (event) => {
       event.preventDefault();
@@ -765,5 +774,8 @@ const UI = (() => {
     openForm,
     confirmAction,
     openImagePicker,
+    imagesControl,
+    bindImages,
+    collectImages,
   };
 })();

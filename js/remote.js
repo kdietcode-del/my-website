@@ -39,10 +39,19 @@ const Remote = (() => {
     }
   }
 
+  /* 내 PC 에서 띄운 사본은 기본 주소를 쓰지 않는다. 고치는 중인 사본이
+     진짜 보드에 글을 쓰면, 시험 삼아 지운 것이 모두의 화면에서 지워진다.
+     정말 필요하면 설정에서 주소를 직접 넣으면 된다. */
+  function isLocal() {
+    const host = location.hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "";
+  }
+
   function baseUrl() {
     const saved = read(BASE_KEY);
     if (saved === OFF) return "";
-    return saved || DEFAULT_BASE;
+    if (saved) return saved;
+    return isLocal() ? "" : DEFAULT_BASE;
   }
 
   function setBaseUrl(value) {

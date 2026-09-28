@@ -608,12 +608,12 @@ const Concept = (() => {
       );
     }
 
-    /* 썸네일을 누르면 열리는 칸 */
+    /* 썸네일을 누르면 열리는 칸. 적는 칸과 함께 사진도 여기서 넣는다 —
+       카드에는 사진을 갈아 끼울 자리가 없다. */
     function openNotes(card) {
       const record = recordOf(card);
       if (!record) return;
-      const title =
-        [record.brand, record.name].filter(Boolean).join(" ") || "경쟁제품";
+      const title = [record.brand, record.name].filter(Boolean).join(" ") || "경쟁제품";
       const body = NOTE_FIELDS.map((f) => {
         const id = "rnote_" + f.key;
         return (
@@ -624,22 +624,29 @@ const Concept = (() => {
           "</div>"
         );
       }).join("");
+      const shots =
+        '<div class="field field--wide">' +
+        "<label>썸네일 · 이미지</label>" +
+        UI.imagesControl(record.images || []) +
+        "</div>";
       const node = UI.openModal(
         title,
-        '<div class="form-grid">' + body + "</div>",
+        '<div class="form-grid">' + body + shots + "</div>",
         '<button type="button" class="btn btn--ghost" data-close>닫기</button>' +
           '<button type="button" class="btn btn--primary" data-note-save>저장</button>'
       );
       if (!node) return;
+      UI.bindImages(node);
       node.querySelector("[data-note-save]").addEventListener("click", () => {
-        const patch = {};
+        const patch = { images: UI.collectImages(node) };
         NOTE_FIELDS.forEach((f) => {
           patch[f.key] = node.querySelector('[data-note="' + f.key + '"]').value.trim();
         });
         Store.updateCompetitor(idOf(card), patch);
         paintMark(card);
+        paintShot(card);
         UI.closeModal();
-        UI.toast("적어 두었습니다. 경쟁제품 참고보드에서도 보입니다.");
+        UI.toast("저장했습니다. 경쟁제품 참고보드에서도 보입니다.");
       });
     }
 
