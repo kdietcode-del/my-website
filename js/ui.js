@@ -156,15 +156,18 @@ const UI = (() => {
 
   /* ---------- 모달 ---------- */
 
-  const dialog = () => document.getElementById("modal");
+  /* 창이 둘이다. 기본은 "modal", 그 위에 겹쳐 뜨는 작은 창이 "picker".
+     하나로 돌려 쓰면 위에 창을 띄우는 순간 아래에 적던 내용이 날아간다. */
+  const dialog = (id) => document.getElementById(id || "modal");
 
-  function closeModal() {
-    const node = dialog();
+  function closeModal(id) {
+    const node = dialog(id);
     if (node && node.open) node.close();
   }
 
-  function openModal(title, bodyHtml, footerHtml) {
-    const node = dialog();
+  function openModal(title, bodyHtml, footerHtml, options) {
+    const opts = options || {};
+    const node = dialog(opts.id);
     if (!node) return null;
     node.innerHTML =
       '<form method="dialog" class="modal__form" id="modal-form">' +
@@ -176,7 +179,7 @@ const UI = (() => {
       '<footer class="modal__foot">' + footerHtml + "</footer>" +
       "</form>";
     node.querySelectorAll("[data-close]").forEach((btn) => {
-      btn.addEventListener("click", closeModal);
+      btn.addEventListener("click", () => closeModal(opts.id));
     });
     node.showModal();
     const firstField = node.querySelector("input, textarea, select");
@@ -306,15 +309,11 @@ const UI = (() => {
       '<div class="images" data-images>' +
       '<div class="images__list" data-image-list>' + images.map(imageThumbHtml).join("") + "</div>" +
       '<div class="images__add">' +
-      '<button type="button" class="btn btn--ghost btn--sm" data-image-pick' +
-      (available ? "" : " disabled") + ">+ 파일에서 고르기</button>" +
-      '<input type="file" accept="image/*" multiple hidden data-image-file>' +
-      '<input type="url" class="input" placeholder="또는 이미지 주소 붙여넣기 (https://…)" data-image-url-input>' +
-      '<button type="button" class="btn btn--ghost btn--sm" data-image-url-add>주소로 넣기</button>' +
+      '<button type="button" class="btn btn--ghost btn--sm" data-image-pick>+ 이미지 넣기</button>' +
       "</div>" +
       '<p class="field__hint" data-image-status>' +
       (available
-        ? "최대 " + MAX_IMAGES + "장. 이 칸을 누르고 Ctrl+V 로 붙여넣거나, 그림을 끌어다 놓아도 됩니다."
+        ? "최대 " + MAX_IMAGES + "장. 누르면 붙여넣기 · 파일 고르기 · 주소 넣기를 고를 수 있습니다."
         : escapeHtml(Images.whyUnavailable()) + " 이미지 주소만 넣을 수 있습니다.") +
       "</p>" +
       "</div>"
@@ -330,17 +329,14 @@ const UI = (() => {
     }));
   }
 
-  /* 폼 안에서 이미지 담기 · 빼기를 처리한다. */
+  /* ---------- 이미지 넣는 창 ----------
 
-  /* ---------- 이미지 붙여넣기 · 끌어다 놓기 ----------
+     버튼을 누르면 곧바로 파일 고르는 창이 떴다. 그러면 초점이 그쪽으로 가
+     버려서, 캡처한 그림을 Ctrl+V 로 넣을 자리가 아예 없었다.
 
-     캡처한 그림을 파일로 저장했다가 다시 고르게 하는 건 번거롭다. Ctrl+V 로
-     바로 들어가야 한다.
-
-     그런데 붙여넣기는 초점이 있는 곳으로만 간다. 이미지 칸은 글 칸이 아니라
-     초점을 받을 일이 없다. 그래서 문서 전체에서 붙여넣기를 듣되, 마지막으로
-     손댄 이미지 칸으로 보낸다. 화면에 칸이 하나뿐이면 손대지 않아도 그리로
-     간다. 어디로 들어갈지 헷갈리지 않도록, 받을 칸에 표시를 켜 둔다. */
+     그래서 우리 창을 먼저 띄운다. 이 창 안에서 붙여넣기 · 끌어다 놓기 ·
+     파일 고르기 · 주소 넣기를 다 받는다. 파일 고르는 창은 그걸 고른
+     사람에게만 뜬다. */
 
   function imageFilesFrom(transfer) {
     if (!transfer) return [];
@@ -358,111 +354,142 @@ const UI = (() => {
     return out;
   }
 
-  let pasteTarget = null;
+  function openImagePicker(options) {
+    const config = options || {};
+    const onFiles = config.onFiles || function () {};
+    const onUrl = config.onUrl || null;
+    const allowFile = config.allowFile !== false && Images.isAvailable();
 
-  function markPasteTarget(zone) {
-    document
-      .querySelectorAll(".is-paste-target")
-      .forEach((node) => node.classList.remove("is-paste-target"));
-    pasteTarget = zone || null;
-    if (zone) zone.classList.add("is-paste-target");
-  }
+    const node = openModal(
+      config.title || "이미지 넣기",
+      '<div class="ipick" tabindex="0" data-ipick>' +
+        '<p class="ipick__keys"><span>Ctrl</span><span>V</span></p>' +
+        '<p class="ipick__say">캡처한 그림을 여기에 붙여넣으세요</p>' +
+        '<p class="ipick__sub">그림 파일을 끌어다 놓아도 됩니다</p>' +
+        "</div>" +
+        '<div class="ipick__rest">' +
+        (allowFile
+          ? '<button type="button" class="btn btn--ghost btn--sm" data-ipick-file>파일에서 고르기</button>'
+          : "") +
+        (onUrl
+          ? '<input type="url" class="input" placeholder="또는 이미지 주소 (https://…)" data-ipick-url>' +
+            '<button type="button" class="btn btn--ghost btn--sm" data-ipick-url-add>주소로 넣기</button>'
+          : "") +
+        "</div>" +
+        '<p class="ipick__msg" data-ipick-msg></p>' +
+        '<input type="file" accept="image/*" multiple hidden data-ipick-input>',
+      '<button type="button" class="btn btn--ghost" data-close>닫기</button>',
+      { id: "picker" }
+    );
+    if (!node) return null;
 
-  function resolvePasteTarget() {
-    if (pasteTarget && document.contains(pasteTarget)) return pasteTarget;
-    /* 창이 떠 있으면 그 안에서 먼저 찾는다. */
-    const modal = document.getElementById("modal");
-    const scope = modal && modal.open ? modal : document;
-    const zones = scope.querySelectorAll("[data-image-drop]");
-    return zones.length === 1 ? zones[0] : null;
-  }
+    const drop = node.querySelector("[data-ipick]");
+    const msg = node.querySelector("[data-ipick-msg]");
+    const fileInput = node.querySelector("[data-ipick-input]");
+    const urlInput = node.querySelector("[data-ipick-url]");
+    const say = (text) => {
+      msg.textContent = text || "";
+    };
 
-  function bindPasteOnce() {
-    if (bindPasteOnce.done) return;
-    bindPasteOnce.done = true;
+    /* 초점을 붙여넣는 자리에 둔다. 창이 열리자마자 Ctrl+V 가 먹어야 한다. */
+    drop.focus();
 
-    document.addEventListener("click", (event) => {
-      const zone = event.target.closest ? event.target.closest("[data-image-drop]") : null;
-      if (zone) markPasteTarget(zone);
-    });
+    const takeFiles = (files) => {
+      if (!files.length) return;
+      say(onFiles(files) || "");
+    };
 
-    document.addEventListener("paste", (event) => {
+    const takeUrl = (raw) => {
+      if (!onUrl) return false;
+      const safe = safeUrl(String(raw || "").trim());
+      if (!safe) return false;
+      say(onUrl(safe) || "");
+      if (urlInput) urlInput.value = "";
+      return true;
+    };
+
+    /* 이 창 안에서 붙여넣으면 여기로 들어온다. 그림이면 그림으로, 이미지
+       주소를 복사해 왔으면 주소로 받는다. */
+    node.addEventListener("paste", (event) => {
       const files = imageFilesFrom(event.clipboardData);
-      if (!files.length) return;
-      const zone = resolvePasteTarget();
-      if (!zone || !zone.__onImageFiles) return;
+      if (files.length) {
+        event.preventDefault();
+        takeFiles(files);
+        return;
+      }
+      if (event.target === urlInput) return;
+      const text = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
+      if (!text) return;
       event.preventDefault();
-      zone.__onImageFiles(files);
+      if (!takeUrl(text)) say("그림도 이미지 주소도 아닙니다.");
     });
+
+    drop.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      drop.classList.add("is-drag-over");
+    });
+    ["dragleave", "dragend", "drop"].forEach((name) => {
+      drop.addEventListener(name, () => drop.classList.remove("is-drag-over"));
+    });
+    drop.addEventListener("drop", (event) => {
+      event.preventDefault();
+      takeFiles(imageFilesFrom(event.dataTransfer));
+    });
+    drop.addEventListener("click", () => drop.focus());
+
+    if (allowFile) {
+      node.querySelector("[data-ipick-file]").addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => {
+        const files = Array.from(fileInput.files || []);
+        fileInput.value = "";
+        takeFiles(files);
+        drop.focus();
+      });
+    }
+
+    if (onUrl) {
+      const tryUrl = () => {
+        if (!takeUrl(urlInput.value)) {
+          say("주소를 알아볼 수 없습니다. http:// 또는 https:// 로 시작해야 합니다.");
+        }
+      };
+      node.querySelector("[data-ipick-url-add]").addEventListener("click", tryUrl);
+      urlInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        tryUrl();
+      });
+    }
+
+    return node;
   }
 
-  /* 이 칸이 붙여넣기와 끌어다 놓기를 받게 한다. */
-  function bindImageTarget(zone, onFiles) {
-    if (!zone) return;
-    zone.dataset.imageDrop = "";
-    zone.__onImageFiles = onFiles;
-    bindPasteOnce();
-
-    zone.addEventListener("dragover", (event) => {
-      if (!Array.from(event.dataTransfer.types || []).includes("Files")) return;
-      event.preventDefault();
-      zone.classList.add("is-drag-over");
-    });
-    ["dragleave", "dragend"].forEach((name) => {
-      zone.addEventListener(name, () => zone.classList.remove("is-drag-over"));
-    });
-    zone.addEventListener("drop", (event) => {
-      const files = imageFilesFrom(event.dataTransfer);
-      zone.classList.remove("is-drag-over");
-      if (!files.length) return;
-      event.preventDefault();
-      markPasteTarget(zone);
-      onFiles(files);
-    });
-
-    /* 화면에 칸이 이것 하나뿐이면 누르지 않아도 여기로 들어간다. */
-    if (document.querySelectorAll("[data-image-drop]").length === 1) markPasteTarget(zone);
-  }
   function bindImages(node) {
     const wrap = node.querySelector("[data-images]");
     if (!wrap) return;
     const list = wrap.querySelector("[data-image-list]");
-    const fileInput = wrap.querySelector("[data-image-file]");
-    const urlInput = wrap.querySelector("[data-image-url-input]");
     const status = wrap.querySelector("[data-image-status]");
 
     const count = () => list.querySelectorAll(".img-thumb").length;
     const roomLeft = () => MAX_IMAGES - count();
 
-    function say(message) {
-      status.textContent = message;
+    /* 창이 떠 있으면 거기에도 결과를 알려 준다. 창에 가려 뒤쪽 안내가
+       안 보이기 때문이다. */
+    function tell(text) {
+      status.textContent = text;
+      const open = document.querySelector("[data-ipick-msg]");
+      if (open) open.textContent = text;
     }
 
-    wrap.querySelector("[data-image-pick]").addEventListener("click", () => fileInput.click());
-
-    fileInput.addEventListener("change", () => {
-      const files = Array.from(fileInput.files || []);
-      fileInput.value = "";
-      takeFiles(files);
-    });
-
-    /* 붙여넣기 · 끌어다 놓기로도 같은 자리로 들어온다. */
-    bindImageTarget(wrap, takeFiles);
-
-    function takeFiles(files) {
-      if (!files.length) return;
+    function addFiles(files) {
       const room = roomLeft();
-      if (room <= 0) {
-        say("이미지는 " + MAX_IMAGES + "장까지 넣을 수 있습니다.");
-        return;
-      }
+      if (room <= 0) return "이미지는 " + MAX_IMAGES + "장까지 넣을 수 있습니다.";
       const picked = files.slice(0, room);
-      say(picked.length + "장 줄이는 중…");
       Promise.all(
         picked.map((file) =>
           Images.addFile(file).then(
             (saved) => ({ ok: true, saved }),
-            (error) => ({ ok: false, error })
+            () => ({ ok: false })
           )
         )
       ).then((results) => {
@@ -474,47 +501,34 @@ const UI = (() => {
         });
         Images.hydrate(list);
         const failed = results.length - added;
-        say(
+        tell(
           added + "장 담았습니다." +
             (failed ? " " + failed + "장은 실패했습니다." : "") +
             (files.length > picked.length ? " (" + MAX_IMAGES + "장 제한)" : "")
         );
       });
+      return picked.length + "장 줄이는 중…";
     }
 
-    function addByUrl() {
-      const raw = urlInput.value.trim();
-      if (!raw) return;
-      const safe = safeUrl(raw);
-      if (!safe) {
-        say("주소를 알아볼 수 없습니다. http:// 또는 https:// 로 시작해야 합니다.");
-        return;
-      }
-      if (roomLeft() <= 0) {
-        say("이미지는 " + MAX_IMAGES + "장까지 넣을 수 있습니다.");
-        return;
-      }
+    function addUrl(safe) {
+      if (roomLeft() <= 0) return "이미지는 " + MAX_IMAGES + "장까지 넣을 수 있습니다.";
       list.insertAdjacentHTML(
         "beforeend",
         imageThumbHtml({ id: "url" + Date.now().toString(36), url: safe })
       );
-      urlInput.value = "";
-      say("주소를 넣었습니다.");
+      status.textContent = "주소를 넣었습니다.";
+      return "주소를 넣었습니다.";
     }
 
-    wrap.querySelector("[data-image-url-add]").addEventListener("click", addByUrl);
-    urlInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        addByUrl();
-      }
+    wrap.querySelector("[data-image-pick]").addEventListener("click", () => {
+      openImagePicker({ onFiles: addFiles, onUrl: addUrl });
     });
 
     list.addEventListener("click", (event) => {
       if (!event.target.matches("[data-image-remove]")) return;
       /* 여기서는 화면에서만 뺀다. 실제 파일은 저장 후 쓰이지 않는 것만 정리한다. */
       event.target.closest(".img-thumb").remove();
-      say("뺐습니다. 저장을 눌러야 반영됩니다.");
+      status.textContent = "뺐습니다. 저장을 눌러야 반영됩니다.";
     });
 
     Images.hydrate(list);
@@ -750,6 +764,6 @@ const UI = (() => {
     closeModal,
     openForm,
     confirmAction,
-    bindImageTarget,
+    openImagePicker,
   };
 })();

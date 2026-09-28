@@ -55,10 +55,14 @@ const Meta = (() => {
   }
 
   /* 키워드 검색량 — 같은 서버의 /keyword 창구에 물어본다. 네이버 검색광고에서
-     지난 한 달 숫자를, 데이터랩에서 6개월 추이를 받아 합친 값이 온다. */
-  function fetchKeyword(proxyBase, word) {
+     지난 한 달 숫자를, 검색어트렌드에서 월별 추이를 받아 합친 값이 온다. */
+  function fetchKeyword(proxyBase, word, months) {
     if (!proxyBase) return noServer();
-    return request(proxyBase.replace(/\/+$/, "") + "/keyword?q=" + encodeURIComponent(word));
+    return request(
+      proxyBase.replace(/\/+$/, "") +
+        "/keyword?q=" + encodeURIComponent(word) +
+        (months ? "&months=" + encodeURIComponent(months) : "")
+    );
   }
 
   /* 가져온 값을 경쟁 제품 입력 화면에 채운다.

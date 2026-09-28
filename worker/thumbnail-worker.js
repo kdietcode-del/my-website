@@ -250,14 +250,17 @@ function trendTarget(env) {
   return null;
 }
 
-async function fetchTrend(env, word) {
+async function fetchTrend(env, word, months) {
   const target = trendTarget(env);
   if (!target) return [];
 
+  /* 몇 달치를 볼지는 물어보는 쪽이 정한다. 화장품은 계절을 타서 열두 달을
+     봐야 보이는 것이 있다. */
+  const span = Math.min(24, Math.max(3, Number(months) || 12));
   const now = new Date();
   /* 오늘 것은 아직 안 쌓였을 수 있어 어제까지만 본다. */
   const end = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 5, 1));
+  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - (span - 1), 1));
 
   const response = await fetch(target.url, {
     method: "POST",
@@ -279,7 +282,9 @@ async function fetchTrend(env, word) {
 }
 
 async function keywordResponse(request, env, origin) {
-  const word = (new URL(request.url).searchParams.get("q") || "").trim();
+  const params = new URL(request.url).searchParams;
+  const word = (params.get("q") || "").trim();
+  const months = params.get("months");
   if (!word) return json({ ok: false, error: "q 값이 없습니다." }, 400, origin);
   if (word.length > 40) return json({ ok: false, error: "키워드가 너무 깁니다." }, 400, origin);
 
@@ -296,7 +301,7 @@ async function keywordResponse(request, env, origin) {
   /* 한쪽이 막혀도 다른 쪽 값은 보여 준다. */
   const [adResult, trendResult] = await Promise.all([
     hasAd ? fetchSearchAd(env, word).catch((e) => ({ error: e.message })) : Promise.resolve(null),
-    hasLab ? fetchTrend(env, word).catch((e) => ({ error: e.message })) : Promise.resolve(null),
+    hasLab ? fetchTrend(env, word, months).catch((e) => ({ error: e.message })) : Promise.resolve(null),
   ]);
 
   const notes = [];

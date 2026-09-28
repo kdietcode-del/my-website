@@ -46,33 +46,37 @@ const Concept = (() => {
     );
   }
 
-  /* 5. 시장크기 — 키워드와 검색량을 줄로 쌓는다.
+  /* 5. 시장크기 — 키워드 한 줄에 검색량과 추이를 나란히 놓는다.
 
-     키워드만 적고 칸을 빠져나오면 검색량은 알아서 채워진다. 네이버 검색광고가
-     주는 지난 한 달 숫자이고, 그 아래 막대는 데이터랩에서 받은 6개월 추이다.
-     지난 달들의 숫자는 비율을 지난 달 실제값에 맞춰 편 추정치다. */
+     키워드는 '잡티앰플' 네 자면 끝이라 칸이 넓을 이유가 없다. 남는 폭은
+     추이가 가져간다. 숫자 하나만으로는 뜨는 말인지 지는 말인지 알 수 없고,
+     화장품은 계절을 타서 열두 달을 봐야 한다.
+
+     막대에 얹히는 지난 달 숫자는 추정이다. 데이터랩이 비율만 주기 때문에
+     마지막 달 실제값에 맞춰 편 값이다. */
+  const TREND_MONTHS = 12;
+
   function sparkline(trend) {
     if (!trend || trend.length < 2) return "";
     const top = Math.max.apply(null, trend.map((p) => p.ratio || 0));
     if (!top) return "";
     const bars = trend
       .map((point) => {
-        const height = Math.max(2, Math.round(((point.ratio || 0) / top) * 18));
+        const height = Math.max(2, Math.round(((point.ratio || 0) / top) * 100));
         const label =
           point.period +
           (point.count != null ? " · " + Number(point.count).toLocaleString("ko-KR") + "회" : "");
         return (
-          '<span class="spark__bar" style="height:' + height + 'px" title="' +
-          UI.escapeHtml(label) + '"></span>'
+          '<span class="spark__bar"><span style="height:' + height + '%" title="' +
+          UI.escapeHtml(label) + '"></span></span>'
         );
       })
       .join("");
-    const first = trend[0].period;
-    const last = trend[trend.length - 1].period;
     return (
       '<span class="spark" aria-label="' +
-      UI.escapeHtml(first + " 부터 " + last + " 까지 검색 추이") + '">' + bars + "</span>" +
-      '<span class="spark__cap">최근 6개월</span>'
+      UI.escapeHtml(trend[0].period + " 부터 " + trend[trend.length - 1].period + " 까지 검색 추이") +
+      '">' + bars + "</span>" +
+      '<span class="spark__cap">' + trend.length + "개월</span>"
     );
   }
 
@@ -84,11 +88,11 @@ const Concept = (() => {
       '<input type="text" class="input krow__word" value="' + UI.escapeHtml(row.keyword || "") +
       '" placeholder="' + UI.escapeHtml(placeholder || "키워드") + '" aria-label="키워드">' +
       '<input type="text" class="input krow__count" value="' + UI.escapeHtml(row.count || "") +
-      '" placeholder="검색량" aria-label="검색량" inputmode="numeric">' +
+      '" placeholder="검색량" aria-label="월 검색량" inputmode="numeric">' +
+      '<span class="krow__trend" data-krow-trend>' + sparkline(trend) + "</span>" +
       '<button type="button" class="icon-btn" data-krow-look aria-label="검색량 다시 가져오기" ' +
       'title="검색량 다시 가져오기">↻</button>' +
       '<button type="button" class="icon-btn" data-krow-remove aria-label="이 줄 삭제">✕</button>' +
-      '<p class="krow__trend" data-krow-trend>' + sparkline(trend) + "</p>" +
       "</div>"
     );
   }
@@ -220,8 +224,6 @@ const Concept = (() => {
       '<button type="button" class="czone__add" data-image-add>' +
       "<span>＋</span>" + UI.escapeHtml(label) +
       "</button>" +
-      '<input type="file" accept="image/*" multiple hidden data-image-file>' +
-      '<p class="czone__hint">누르고 Ctrl+V · 끌어다 놓기도 됩니다</p>' +
       "</div>"
     );
   }
@@ -492,7 +494,7 @@ const Concept = (() => {
 
         row.classList.add("krow--busy");
         trend.textContent = "검색량 가져오는 중…";
-        Meta.fetchKeyword(App.proxyUrl(), word).then(
+        Meta.fetchKeyword(App.proxyUrl(), word, TREND_MONTHS).then(
           (data) => {
             row.classList.remove("krow--busy");
             if (data.total != null) count.value = String(data.total);
@@ -694,7 +696,9 @@ const Concept = (() => {
     root.querySelectorAll("[data-images]").forEach((zone) => {
       const path = zone.dataset.images;
       const grid = zone.querySelector(".czone__grid");
-      const fileInput = zone.querySelector("[data-image-file]");
+      const label = (zone.querySelector("[data-image-add]").textContent || "이미지 넣기")
+        .replace("＋", "")
+        .trim();
 
       const current = () =>
         Array.from(grid.querySelectorAll(".czone__item")).map((item) => ({
@@ -702,33 +706,43 @@ const Concept = (() => {
           url: item.dataset.imageUrl || "",
         }));
 
-      function takeFiles(files) {
-        if (!files.length) return;
-        UI.toast(files.length + "장 넣는 중…");
-        Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
-          (results) => {
-            const saved = Store.getConcept(product.id);
-            const list = path === "images" ? saved.images.slice() : saved.ads.images.slice();
-            results.forEach((r) => {
-              if (r) list.push({ id: r.id, url: "" });
-            });
-            Store.setConcept(product.id, path, list);
-            App.render();
-          }
-        );
+      /* 넣은 것을 기록에 붙인다. 창은 그대로 두어 여러 장을 이어서 붙여넣을
+         수 있게 한다. */
+      function append(entries) {
+        const saved = Store.getConcept(product.id);
+        const list = (path === "images" ? saved.images : saved.ads.images).slice();
+        entries.forEach((entry) => list.push(entry));
+        Store.setConcept(product.id, path, list);
+        App.render();
       }
 
-      zone.querySelector("[data-image-add]").addEventListener("click", () => fileInput.click());
+      function takeFiles(files) {
+        if (!files.length) return "";
+        Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
+          (results) => {
+            const made = results.filter(Boolean).map((r) => ({ id: r.id, url: "" }));
+            if (made.length) append(made);
+            const msg = document.querySelector("[data-ipick-msg]");
+            const failed = results.length - made.length;
+            if (msg) {
+              msg.textContent =
+                made.length + "장 담았습니다." + (failed ? " " + failed + "장은 실패했습니다." : "");
+            }
+          }
+        );
+        return files.length + "장 줄이는 중…";
+      }
 
-      fileInput.addEventListener("change", () => {
-        const files = Array.from(fileInput.files || []);
-        fileInput.value = "";
-        takeFiles(files);
+      function takeUrl(safe) {
+        append([{ id: "url" + Date.now().toString(36), url: safe }]);
+        return "주소를 넣었습니다.";
+      }
+
+      /* 버튼을 누르면 파일 고르는 창이 아니라 우리 창이 뜬다. 거기서 Ctrl+V
+         로 붙여넣는다. 파일 창이 먼저 뜨면 초점을 뺏겨 붙여넣기가 안 된다. */
+      zone.querySelector("[data-image-add]").addEventListener("click", () => {
+        UI.openImagePicker({ title: label, onFiles: takeFiles, onUrl: takeUrl });
       });
-
-      /* 캡처한 그림을 Ctrl+V 로 바로 넣는다. 파일로 저장했다 다시 고르는 건
-         번거롭다. 칸이 둘이라(제품 사진 · 광고소재) 누른 쪽으로 들어간다. */
-      UI.bindImageTarget(zone, takeFiles);
 
       grid.addEventListener("click", (event) => {
         if (!event.target.matches("[data-image-remove]")) return;
