@@ -1465,9 +1465,23 @@ a { color: var(--accent); }
 @media (max-width: 900px) {
   .cboard { padding: 18px; }
   .cboard__head { grid-template-columns: 120px minmax(0, 1fr); }
-  /* 좁으면 추이를 아랫줄로 내린다. 한 줄에 다 넣으면 막대가 뭉개진다. */
-  .krow { grid-template-columns: minmax(0, 1fr) 76px auto auto; }
-  .krow__trend { grid-column: 1 / -1; }
+  /* 좁은 화면에서 키워드 한 줄이 세 줄로 흩어져 있었다. 한 줄로 모은다.
+     '＋ 추이' 는 글자를 접어 단추만 남기고, 막대가 있는 줄만 아랫줄로
+     내린다 — 막대는 좁은 칸에서 뭉개진다. */
+  .krows { gap: 4px; }
+  .krow {
+    grid-template-columns: minmax(0, 1fr) 62px auto auto auto;
+    gap: 4px;
+    align-items: center;
+  }
+  .krow .input { padding: 6px 8px; font-size: 0.875rem; }
+  /* 키워드 · 검색량 · 단추는 모두 첫 줄에 못박는다. 그러지 않으면 막대가
+     둘째 줄로 내려가면서 단추까지 셋째 줄로 밀려난다. */
+  .krow > * { grid-row: 1; }
+  .krow__trend { grid-column: auto; padding: 4px 3px; }
+  .krow__trend--chart { grid-column: 1 / -1; grid-row: 2; padding: 2px 4px; }
+  .spark__add-word { display: none; }
+  .krow .icon-btn { width: 26px; height: 26px; }
   .cspecs { grid-column: 1 / -1; }
   .cboard__grid { grid-template-columns: 1fr; }
   .cpanel--wide, .cpanel--full { grid-column: auto; }

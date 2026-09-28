@@ -103,10 +103,10 @@ const Concept = (() => {
 
   function sparkline(trend) {
     if (!trend || trend.length < 2) {
-      return '<span class="spark__add">＋ 추이</span>';
+      return '<span class="spark__add">＋<span class="spark__add-word"> 추이</span></span>';
     }
     const top = Math.max.apply(null, trend.map((p) => p.ratio || 0));
-    if (!top) return '<span class="spark__add">＋ 추이</span>';
+    if (!top) return '<span class="spark__add">＋<span class="spark__add-word"> 추이</span></span>';
     const bars = trend
       .map((point) => {
         const height = Math.max(2, Math.round(((point.ratio || 0) / top) * 100));
@@ -138,7 +138,8 @@ const Concept = (() => {
       '" placeholder="' + UI.escapeHtml(placeholder || "키워드") + '" aria-label="키워드">' +
       '<input type="text" class="input krow__count" value="' + UI.escapeHtml(row.count || "") +
       '" placeholder="검색량" aria-label="월 검색량" inputmode="numeric">' +
-      '<button type="button" class="krow__trend" data-krow-trend ' +
+      '<button type="button" class="krow__trend' +
+      (trend.length > 1 ? " krow__trend--chart" : "") + '" data-krow-trend ' +
       'title="눌러서 월별 검색량 적기">' + sparkline(trend) + "</button>" +
       '<button type="button" class="icon-btn" data-krow-look aria-label="검색량 다시 가져오기" ' +
       'title="검색량 다시 가져오기">↻</button>' +
@@ -640,6 +641,7 @@ const Concept = (() => {
             const keep = fetched.length ? fetched : had;
             row.dataset.trend = keep.length ? JSON.stringify(keep) : "";
             trend.innerHTML = sparkline(keep);
+            trend.classList.toggle("krow__trend--chart", keep.length > 1);
 
             /* 막대가 왜 안 나오는지 말해 주지 않으면, 눌러 놓고 고장인 줄
                안다. 직접 누른 때만 알린다 — 줄마다 뜨면 잔소리가 된다. */
@@ -727,7 +729,9 @@ const Concept = (() => {
           const counts = boxes.map((box) => Number(box.value.replace(/[^0-9]/g, "")) || 0);
           const made = counts.some((c) => c > 0) ? trendFromCounts(counts) : [];
           row.dataset.trend = made.length ? JSON.stringify(made) : "";
-          row.querySelector("[data-krow-trend]").innerHTML = sparkline(made);
+          const cell = row.querySelector("[data-krow-trend]");
+          cell.innerHTML = sparkline(made);
+          cell.classList.toggle("krow__trend--chart", made.length > 1);
           save();
           UI.closeModal();
         });
