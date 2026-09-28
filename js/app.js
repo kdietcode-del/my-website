@@ -30,7 +30,7 @@ const App = (() => {
   const TABS = [
     { key: "pipeline", label: "🚀 제품 런칭 상황보드", short: "🚀 런칭", view: () => Pipeline },
     { key: "concept", label: "🎨 제품 컨셉보드", short: "🎨 컨셉", view: () => Concept },
-    { key: "ideas", label: "💡 신제품 아이디어", short: "💡 아이디어", view: () => Ideas },
+    { key: "ideas", label: "💡 신제품 아이디어", short: "💡 신제품 아이디어", view: () => Ideas },
   ];
 
   let activeTab = "pipeline";
