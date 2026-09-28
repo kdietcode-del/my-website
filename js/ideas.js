@@ -97,14 +97,8 @@ const Ideas = (() => {
         span: 2,
         hint: "타사 제품, 아티클, 이미지 링크 등 근거가 되는 자료를 모아둡니다.",
       },
-      {
-        name: "memo",
-        label: "메모",
-        type: "textarea",
-        rows: 2,
-        span: 2,
-        placeholder: "나중의 내가 알아야 할 맥락",
-      },
+      /* 메모 칸은 뺐다. 여기 적히던 '아직 안 정해진 것' 은 기획서의
+         '디벨롭 필요사항' 에서 적는다. 두 군데 두면 갈린다. */
     ];
   }
 
@@ -185,7 +179,9 @@ const Ideas = (() => {
         name: idea.name,
         category: idea.category,
         efficacyType: idea.efficacyType,
-        memo: [idea.usp, idea.ingredients, idea.memo].filter(Boolean).join("\n\n"),
+        memo: [idea.usp, idea.ingredients, ((idea.plan || {}).develop || {}).text]
+          .filter(Boolean)
+          .join("\n\n"),
       },
       submitLabel: "8단계 보드 만들기",
       onSubmit: (data) => {
@@ -220,7 +216,7 @@ const Ideas = (() => {
         idea.efficacy,
         idea.ingredients,
         idea.usp,
-        idea.memo,
+        ((idea.plan || {}).develop || {}).text,
         (idea.tags || []).join(" "),
         (idea.refs || []).map((r) => r.label).join(" "),
       ]
@@ -298,9 +294,11 @@ const Ideas = (() => {
           UI.escapeHtml(idea.usp) + "</p></div>"
         : "") +
       refsHtml(idea.refs) +
-      (idea.memo
-        ? '<div class="card__block card__block--memo"><h4 class="card__label">메모</h4><p>' +
-          UI.escapeHtml(idea.memo) + "</p></div>"
+      /* 메모는 기획서의 '디벨롭 필요사항' 으로 옮겼다. 카드에서는 읽기만 한다 —
+         고치는 곳이 둘이면 어느 쪽이 최신인지 알 수 없다. */
+      (((idea.plan || {}).develop || {}).text
+        ? '<div class="card__block card__block--memo"><h4 class="card__label">디벨롭 필요사항</h4><p>' +
+          UI.escapeHtml(idea.plan.develop.text) + "</p></div>"
         : "") +
       (tags ? '<div class="chip-row">' + tags + "</div>" : "") +
       '<footer class="card__foot">' +

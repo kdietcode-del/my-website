@@ -1763,3 +1763,17 @@ body.is-locked #settings-btn { display: none; }
   .ptext:hover, .ptext:focus { background: none; }
   .psheet__count { display: none !important; }
 }
+
+/* 디벨롭 필요사항 — 일곱 단계 어디에도 안 들어가는 것들. 판정표 바로 아래에
+   두어, 무엇이 아직 안 정해졌는지가 판정과 나란히 보이게 한다. */
+.pdev {
+  border: 1px solid var(--grid);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  margin-bottom: 28px;
+  background: var(--surface-2);
+}
+.pdev__title { font-size: 0.9375rem; }
+.pdev__hint { font-size: 0.75rem; color: var(--muted); margin: 3px 0 10px; }
+.ptext--dev { background: var(--surface); min-height: 3.2em; }

@@ -39,7 +39,7 @@ const App = (() => {
     activeTab = tabKey;
     if (tabKey === "pipeline") Pipeline.setActive(payload || null);
     if (tabKey === "concept") Concept.setActive(payload || null);
-    /* 경쟁제품 참고보드는 이제 컨셉보드 안에 있다. 바깥에서 부르면
+    /* 참고제품 보드는 이제 컨셉보드 안에 있다. 바깥에서 부르면
        그 제품의 컨셉보드로 보낸 뒤 참고보드를 편다. */
     if (tabKey === "competitors") {
       activeTab = "concept";
@@ -222,7 +222,7 @@ const App = (() => {
         : "") +
 
       '<h3 class="settings__title">가져오기 서버</h3>' +
-      '<p class="settings__note">경쟁제품 링크에서 제품명 · 썸네일을 받아오고, 컨셉보드 시장크기 칸의 키워드 검색량을 채우는 데 쓰입니다. 만드는 방법은 저장소의 worker/README.md 에 있습니다.</p>' +
+      '<p class="settings__note">참고제품 링크에서 제품명 · 썸네일을 받아오고, 컨셉보드 시장크기 칸의 키워드 검색량을 채우는 데 쓰입니다. 만드는 방법은 저장소의 worker/README.md 에 있습니다.</p>' +
       '<div class="settings__row">' +
       '<input type="url" class="input" id="set-proxy" placeholder="https://thumbnail.계정이름.workers.dev" value="' +
       UI.escapeHtml(proxyUrl()) + '">' +

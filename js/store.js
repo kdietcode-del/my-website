@@ -220,6 +220,7 @@ const Store = (() => {
       idea.category = migrateCategory(idea.category);
       idea.plan = normalizePlan(idea.plan);
       seedPlanFromIdea(idea);
+      moveMemoToDevelop(idea);
       /* seedId 는 나중에 생긴 필드다. 이름으로 되찾아 붙여 두지 않으면
          '이미 있는 항목' 검사가 빗나가 기본 목록이 한 번 더 들어간다. */
       if (!idea.seedId) {
@@ -379,6 +380,8 @@ const Store = (() => {
 
     return {
       oneLine: planText(p.oneLine),
+      /* 일곱 단계 어디에도 안 들어가는 것들 — 더 고민할 것, 정해야 할 것. */
+      develop: planText(p.develop),
       steps: {
         pain: {
           answer: pain.answer,
@@ -499,6 +502,24 @@ const Store = (() => {
       .map((ref) => ({ label: str((ref || {}).label), url: str((ref || {}).url) }))
       .filter((ref) => ref.label || ref.url);
     if (refs.length && !plan.steps.visual.refs.length) plan.steps.visual.refs = refs;
+  }
+
+  /* 카드에 적어 두던 메모를 기획서의 '디벨롭 필요사항' 으로 옮긴다.
+
+     메모에 적히던 것은 대개 '이걸로 갈지 저걸로 갈지' 같은, 아직 안 정해진
+     것들이다. 기획서에 그 자리가 없어 카드에만 남아 있었다.
+
+     베끼는 것이 아니라 옮기는 것이라 카드 쪽은 비운다. 두 군데 두면 어느
+     쪽이 최신인지 알 수 없게 된다. */
+  function moveMemoToDevelop(idea) {
+    if (idea.memoMoved) return;
+    idea.memoMoved = true;
+    seededSome = true;
+
+    const memo = String(idea.memo || "").trim();
+    if (!memo) return;
+    if (!idea.plan.develop.text) idea.plan.develop.text = memo;
+    idea.memo = "";
   }
 
   /* "steps.market.rows" 처럼 점으로 이어진 길을 따라가 값을 바꾼다. */

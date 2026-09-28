@@ -321,6 +321,18 @@ const Plan = (() => {
     );
   }
 
+  /* 일곱 단계 어디에도 안 들어가는 것들. 판정표 바로 아래에 둔다 — 무엇이
+     아직 안 정해졌는지가 판정과 나란히 보여야 한다. */
+  function developHtml(plan) {
+    return (
+      '<section class="pdev">' +
+      '<h3 class="pdev__title">디벨롭 필요사항</h3>' +
+      '<p class="pdev__hint">아직 안 정해진 것, 더 알아봐야 할 것, 고민 중인 갈림길을 적어 두세요.</p>' +
+      text("develop", plan.develop, "엉덩이 볼륨업으로 갈지 탄력업으로 갈지 · 골반도 가능성 있을지", "ptext--dev") +
+      "</section>"
+    );
+  }
+
   function sheetHtml(idea) {
     const plan = idea.plan;
     return (
@@ -333,6 +345,7 @@ const Plan = (() => {
       '<p class="psheet__note">이 한 줄이 안 나오면 7단계를 채울 필요도 없습니다.</p>' +
       "</header>" +
       summaryTable(plan) +
+      developHtml(plan) +
       '<div class="psteps">' +
       PLAN_STEPS.map((step) => stepSection(step, plan.steps[step.key])).join("") +
       "</div>" +

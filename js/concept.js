@@ -8,7 +8,7 @@
 
 const Concept = (() => {
   let activeId = null;
-  /* "list" 제품 고르기 · "board" 컨셉보드 · "rivals" 그 제품의 경쟁제품 참고보드 */
+  /* "list" 제품 고르기 · "board" 컨셉보드 · "rivals" 그 제품의 참고제품 보드 */
   let mode = "list";
 
   function setActive(id) {
@@ -159,7 +159,7 @@ const Concept = (() => {
     );
   }
 
-  /* 7. 경쟁제품 — 경쟁제품 참고보드와 같은 기록을 본다. 두 군데 따로 적으면
+  /* 7. 참고제품 — 참고제품 보드와 같은 기록을 본다. 두 군데 따로 적으면
      같은 제품이 두 번 들어가고, 어느 쪽이 최신인지 알 수 없게 된다.
 
      카드에는 이름만 두고, 썸네일을 누르면 USP · 주요 성분 · 참고 영상이
@@ -174,7 +174,7 @@ const Concept = (() => {
 
   function rivalCard(row) {
     const link = UI.safeUrl(row.url);
-    const title = [row.brand, row.name].filter(Boolean).join(" ") || "이 경쟁제품";
+    const title = [row.brand, row.name].filter(Boolean).join(" ") || "이 참고제품";
     const noted = row.claims || row.ingredients || row.video;
     return (
       '<div class="rcard" data-cid="' + UI.escapeHtml(row.id) + '">' +
@@ -185,7 +185,7 @@ const Concept = (() => {
       rivalShot(row) +
       '<span class="rcard__mark' + (noted ? " rcard__mark--on" : "") + '" aria-hidden="true">✎</span>' +
       "</button>" +
-      '<button type="button" class="img-thumb__x" data-rcard-remove aria-label="이 경쟁제품 삭제">✕</button>' +
+      '<button type="button" class="img-thumb__x" data-rcard-remove aria-label="이 참고제품 삭제">✕</button>' +
       "</div>" +
       '<input type="text" class="input rcard__f" data-f="brand" value="' +
       UI.escapeHtml(row.brand || "") + '" placeholder="브랜드" aria-label="브랜드">' +
@@ -207,7 +207,7 @@ const Concept = (() => {
       '<div class="rcards" data-rivals>' +
       Store.competitorsFor(productId).map(rivalCard).join("") +
       '<button type="button" class="rcard rcard--add" data-rcard-add>' +
-      "<span>＋</span>경쟁제품 추가</button>" +
+      "<span>＋</span>참고제품 추가</button>" +
       "</div>"
     );
   }
@@ -317,7 +317,7 @@ const Concept = (() => {
         "cpanel--wide"
       ) +
 
-      panel("경쟁제품", rivalRows(product.id), "cpanel--wide") +
+      panel("참고제품", rivalRows(product.id), "cpanel--wide") +
 
       panel("상표 가능여부", checkHtml("trademark", c.trademark, "상표 가능여부")) +
       panel("비포애프터 가능여부", checkHtml("beforeAfter", c.beforeAfter, "비포애프터 가능여부")) +
@@ -379,7 +379,7 @@ const Concept = (() => {
     const product = activeId ? Store.getProduct(activeId) : null;
     if (activeId && !product) activeId = null;
 
-    /* 이 제품의 경쟁제품 참고보드 — 컨셉보드 안에서 열린다 */
+    /* 이 제품의 참고제품 보드 — 컨셉보드 안에서 열린다 */
     if (product && mode === "rivals") {
       Competitors.renderEmbedded(root, product.id, () => {
         mode = "board";
@@ -396,7 +396,7 @@ const Concept = (() => {
         '<button type="button" class="btn btn--ghost btn--sm" data-act="back">← 전체 제품</button>' +
         "</div>" +
         '<div class="view__actions">' +
-        '<button type="button" class="btn btn--ghost" data-act="rivals">🔍 경쟁제품 참고보드' +
+        '<button type="button" class="btn btn--ghost" data-act="rivals">🔍 참고제품 보드' +
         (rivalCount ? " (" + rivalCount + ")" : "") + "</button>" +
         '<button type="button" class="btn btn--ghost" data-act="print">인쇄 · PDF</button>' +
         "</div>" +
@@ -735,7 +735,7 @@ const Concept = (() => {
             paintShot(card);
             msg.textContent = "";
           } else {
-            msg.textContent = "이 페이지에는 대표 이미지가 없습니다. 참고보드에서 직접 넣을 수 있습니다.";
+            msg.textContent = "이 페이지에는 대표 이미지가 없습니다. 참고제품 보드에서 직접 넣을 수 있습니다.";
           }
         },
         (error) => {
@@ -750,7 +750,7 @@ const Concept = (() => {
     function openNotes(card) {
       const record = recordOf(card);
       if (!record) return;
-      const title = [record.brand, record.name].filter(Boolean).join(" ") || "경쟁제품";
+      const title = [record.brand, record.name].filter(Boolean).join(" ") || "참고제품";
       const body = NOTE_FIELDS.map((f) => {
         const id = "rnote_" + f.key;
         return (
@@ -783,7 +783,7 @@ const Concept = (() => {
         paintMark(card);
         paintShot(card);
         UI.closeModal();
-        UI.toast("저장했습니다. 경쟁제품 참고보드에서도 보입니다.");
+        UI.toast("저장했습니다. 참고제품 보드에서도 보입니다.");
       });
     }
 
@@ -814,7 +814,7 @@ const Concept = (() => {
 
       if (event.target.matches("[data-rcard-remove]")) {
         const card = event.target.closest(".rcard");
-        UI.confirmAction("이 경쟁제품을 지웁니다. 참고보드에서도 없어집니다.", () => {
+        UI.confirmAction("이 참고제품을 지웁니다. 참고제품 보드에서도 없어집니다.", () => {
           Store.removeCompetitor(idOf(card));
           App.render();
         }, "지우기");

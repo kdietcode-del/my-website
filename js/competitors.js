@@ -1,5 +1,5 @@
 /* ============================================================
-   3) 경쟁제품 참고보드 — 런칭 중인 제품별로 경쟁 제품 자료를 모아 본다
+   3) 참고제품 보드 — 런칭 중인 제품별로 참고 제품 자료를 모아 본다
    ============================================================ */
 
 const Competitors = (() => {
@@ -83,13 +83,13 @@ const Competitors = (() => {
 
   function openCreate() {
     UI.openForm({
-      title: "경쟁 제품 추가",
+      title: "참고 제품 추가",
       fields: fieldSpec(),
       values: { productId: filters.productId },
       submitLabel: "자료 추가",
       onSubmit: (data) => {
         Store.addCompetitor(normalizeSubmit(data));
-        UI.toast("경쟁 제품을 추가했습니다.");
+        UI.toast("참고 제품을 추가했습니다.");
         App.render();
       },
     });
@@ -99,7 +99,7 @@ const Competitors = (() => {
     const competitor = Store.state.competitors.find((c) => c.id === id);
     if (!competitor) return;
     UI.openForm({
-      title: "경쟁 제품 수정",
+      title: "참고 제품 수정",
       fields: fieldSpec(),
       values: Object.assign({}, competitor),
       submitLabel: "저장",
@@ -164,7 +164,7 @@ const Competitors = (() => {
       (hasOurs
         ? '<span class="legend__item"><span class="legend__swatch legend__swatch--ours"></span>우리 목표가</span>'
         : "") +
-      '<span class="legend__item"><span class="legend__swatch"></span>경쟁 제품</span>' +
+      '<span class="legend__item"><span class="legend__swatch"></span>참고 제품</span>' +
       "</div>" +
       "</div>" +
       '<div class="bar-chart">' + bars + "</div>" +
@@ -293,11 +293,11 @@ const Competitors = (() => {
       ? priceChartHtml(product, list) + tableHtml(list)
       : '<div class="empty"><p class="empty__title">' +
         (Store.state.competitors.length
-          ? "이 제품에 연결된 경쟁 제품이 없습니다."
-          : "아직 모아둔 경쟁 제품 자료가 없습니다.") +
+          ? "이 제품에 연결된 참고 제품이 없습니다."
+          : "아직 모아둔 참고 제품 자료가 없습니다.") +
         "</p><p>" +
         (products.length
-          ? "'경쟁 제품 추가'로 가격 · 성분 · 소구 포인트를 쌓아 두면 상세페이지 기획할 때 그대로 씁니다."
+          ? "'참고 제품 추가'로 가격 · 성분 · 소구 포인트를 쌓아 두면 상세페이지 기획할 때 그대로 씁니다."
           : "먼저 제품 런칭 상황보드에 제품을 추가하면 제품별로 묶어서 관리할 수 있습니다.") +
         "</p></div>";
 
@@ -309,14 +309,14 @@ const Competitors = (() => {
       (inBoard
         ? '<button type="button" class="btn btn--ghost btn--sm" data-act="back">← 컨셉보드</button>'
         : "") +
-      "<h2>🔍 경쟁제품 참고보드</h2>" +
+      "<h2>🔍 참고제품 보드</h2>" +
       '<p class="view__sub">' +
       (inBoard && product
         ? UI.escapeHtml(product.name) + " 의 경쟁 상대를 가격 · 성분 · 소구 포인트로 나란히 놓고 봅니다."
         : "런칭 준비 중인 제품별로 경쟁 상대를 모아 가격 · 성분 · 소구 포인트를 나란히 놓고 봅니다.") +
       "</p>" +
       "</div>" +
-      '<button type="button" class="btn btn--primary" data-act="create">+ 경쟁 제품 추가</button>' +
+      '<button type="button" class="btn btn--primary" data-act="create">+ 참고 제품 추가</button>' +
       "</div>" +
       '<div class="toolbar">' + (inBoard ? "" : productSelect) + sortSelect + "</div>" +
       (product
