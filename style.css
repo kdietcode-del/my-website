@@ -1890,3 +1890,39 @@ body.is-locked #settings-btn { display: none; }
 .czone__zoom:hover { box-shadow: inset 0 0 0 2px var(--accent); }
 .czone__zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .lightbox__img { max-width: 100%; max-height: 70vh; object-fit: contain; }
+
+/* 제품 상세 위쪽 — 왼쪽에 진행률과 할 일, 오른쪽에 제품 사진.
+   어느 제품 얘기인지가 숫자보다 먼저 눈에 들어와야 한다. */
+.pdtop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+.pdtop__main { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.pdtop__main .summary { margin-bottom: 16px; }
+.pdtop__main .todos { margin-bottom: 0; }
+
+.pdshot {
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+}
+.pdshot .czone__grid { grid-template-columns: 1fr; gap: 8px; }
+.pdshot .czone__item {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+/* 화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다 */
+.pdshot .czone__zoom img { object-fit: contain; }
+.pdshot .czone__add { padding: 10px; font-size: 0.75rem; }
+
+@media (max-width: 900px) {
+  .pdtop { grid-template-columns: 1fr; }
+  .pdshot .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .pdshot .czone__item { aspect-ratio: 1; }
+}

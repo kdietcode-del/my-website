@@ -131,6 +131,32 @@ const Pipeline = (() => {
 
   /* ---------- 단일 제품 상세 화면 ---------- */
 
+  /* 제품 사진 — 컨셉보드에 넣은 그 사진을 그대로 본다. 여기서 넣어도 거기에
+     같이 뜬다. 제품의 얼굴이 화면마다 다르면 안 된다. */
+  function detailShotHtml(product) {
+    const images = ((product.concept || {}).images) || [];
+    const thumbs = images
+      .map(
+        (image, index) =>
+          '<div class="czone__item" data-image-index="' + index + '">' +
+          '<button type="button" class="czone__zoom" data-image-zoom aria-label="크게 보기">' +
+          (image.url
+            ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
+            : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">') +
+          "</button>" +
+          '<button type="button" class="img-thumb__x" data-image-remove aria-label="사진 빼기">✕</button>' +
+          "</div>"
+      )
+      .join("");
+    return (
+      '<div class="pdshot czone" data-detail-images>' +
+      '<div class="czone__grid">' + thumbs + "</div>" +
+      '<button type="button" class="czone__add" data-image-add>' +
+      "<span>＋</span>제품 이미지 넣기</button>" +
+      "</div>"
+    );
+  }
+
   function summaryHtml(product) {
     const progress = Store.productProgress(product);
     const stageMeta = UI.stageMeta(progress.currentStage);
@@ -254,12 +280,17 @@ const Pipeline = (() => {
       '<button type="button" class="btn btn--ghost" data-act="remove">삭제</button>' +
       "</div>" +
       "</div>" +
+      '<div class="pdtop">' +
+      '<div class="pdtop__main">' +
       '<section class="summary" id="product-summary">' + summaryHtml(product) + "</section>" +
       /* 단계 체크리스트에 안 들어가는, 지금 당장 할 것들. 단계 앞에 둔다. */
       UI.todosHtml(product.todos, {
         title: "지금 해야할 일",
         placeholder: "이 제품에서 지금 할 일을 적고 Enter",
       }) +
+      "</div>" +
+      detailShotHtml(product) +
+      "</div>" +
       '<div class="stage-list">' +
       product.stages.map((stage) => stageHtml(product, stage)).join("") +
       "</div>"
@@ -355,6 +386,62 @@ const Pipeline = (() => {
     });
   }
 
+  function bindDetailShot(root, product) {
+    const zone = root.querySelector("[data-detail-images]");
+    if (!zone) return;
+    const grid = zone.querySelector(".czone__grid");
+
+    const listOf = () => (((Store.getProduct(product.id) || {}).concept || {}).images || []).slice();
+
+    function append(entries) {
+      Store.setConcept(product.id, "images", listOf().concat(entries));
+      App.render();
+    }
+
+    function takeFiles(files) {
+      if (!files.length) return "";
+      Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
+        (results) => {
+          const made = results.filter(Boolean).map((r) => ({ id: r.id, url: "" }));
+          if (made.length) append(made);
+          const msg = document.querySelector("[data-ipick-msg]");
+          if (msg) msg.textContent = made.length + "장 담았습니다.";
+        }
+      );
+      return files.length + "장 줄이는 중…";
+    }
+
+    zone.querySelector("[data-image-add]").addEventListener("click", () => {
+      UI.openImagePicker({
+        title: "제품 이미지 넣기",
+        onFiles: takeFiles,
+        onUrl: (safe) => {
+          append([{ id: "url" + Date.now().toString(36), url: safe }]);
+          return "주소를 넣었습니다.";
+        },
+      });
+    });
+
+    grid.addEventListener("click", (event) => {
+      const item = event.target.closest(".czone__item");
+      if (!item) return;
+      const index = Number(item.dataset.imageIndex);
+
+      if (event.target.closest("[data-image-zoom]")) {
+        const image = listOf()[index];
+        if (image) UI.openImage(image, { title: product.name, name: product.name });
+        return;
+      }
+      if (!event.target.matches("[data-image-remove]")) return;
+      const list = listOf();
+      list.splice(index, 1);
+      Store.setConcept(product.id, "images", list);
+      App.render();
+    });
+
+    Images.hydrate(zone);
+  }
+
   function bindDetail(root, product) {
     root.querySelector('[data-act="back"]').addEventListener("click", () => {
       setActive(null);
@@ -362,6 +449,8 @@ const Pipeline = (() => {
     });
     root.querySelector('[data-act="edit"]').addEventListener("click", () => openEdit(product.id));
     root.querySelector('[data-act="remove"]').addEventListener("click", () => remove(product.id));
+
+    bindDetailShot(root, product);
 
     UI.bindTodos(root, {
       add: (text) => Store.addProductTodo(product.id, text),
