@@ -1926,3 +1926,24 @@ body.is-locked #settings-btn { display: none; }
   .pdshot .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   .pdshot .czone__item { aspect-ratio: 1; }
 }
+
+/* 사진이 없을 때 — 빈 자리가 곧 넣는 자리다. 아래에 단추를 따로 두지 않는다. */
+.pdshot__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.pdshot__empty:hover { border-color: var(--accent); color: var(--accent); }
+.pdshot__empty span { font-size: 1.25rem; line-height: 1; }
+.pdshot .czone__zoom { cursor: pointer; }

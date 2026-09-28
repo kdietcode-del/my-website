@@ -889,7 +889,9 @@ const UI = (() => {
     const node = openModal(
       o.title || "이미지",
       '<div class="lightbox">' + body + "</div>",
-      '<a class="btn btn--primary" data-image-save>저장</a>' +
+      (o.onRemove ? '<button type="button" class="btn btn--ghost" data-image-drop>빼기</button>' : "") +
+        (o.onReplace ? '<button type="button" class="btn btn--ghost" data-image-swap>바꾸기</button>' : "") +
+        '<a class="btn btn--primary" data-image-save>저장</a>' +
         '<button type="button" class="btn btn--ghost" data-close>닫기</button>'
     );
     if (!node) return;
@@ -920,6 +922,19 @@ const UI = (() => {
         save.rel = "noopener noreferrer";
         save.textContent = "새 탭에서 열기";
       }
+    }
+
+    if (o.onReplace) {
+      node.querySelector("[data-image-swap]").addEventListener("click", () => {
+        closeModal();
+        o.onReplace();
+      });
+    }
+    if (o.onRemove) {
+      node.querySelector("[data-image-drop]").addEventListener("click", () => {
+        closeModal();
+        o.onRemove();
+      });
     }
 
     /* 브라우저 안에 담아 둔 그림은 주소가 나중에 붙는다. */

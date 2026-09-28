@@ -132,27 +132,39 @@ const Pipeline = (() => {
   /* ---------- 단일 제품 상세 화면 ---------- */
 
   /* 제품 사진 — 컨셉보드에 넣은 그 사진을 그대로 본다. 여기서 넣어도 거기에
-     같이 뜬다. 제품의 얼굴이 화면마다 다르면 안 된다. */
+     같이 뜬다. 제품의 얼굴이 화면마다 다르면 안 된다.
+
+     사진 아래에 '넣기' 단추를 따로 두지 않는다. 사진 자체가 누르는 자리이고,
+     누르면 크게 뜨면서 바꾸기 · 빼기 · 저장이 거기 다 있다. 사진이 없을 때만
+     빈 자리가 넣는 자리 노릇을 한다. */
   function detailShotHtml(product) {
     const images = ((product.concept || {}).images) || [];
+
+    if (!images.length) {
+      return (
+        '<div class="pdshot czone" data-detail-images>' +
+        '<button type="button" class="pdshot__empty" data-image-add>' +
+        '<span aria-hidden="true">＋</span>제품 이미지 넣기</button>' +
+        "</div>"
+      );
+    }
+
     const thumbs = images
       .map(
         (image, index) =>
           '<div class="czone__item" data-image-index="' + index + '">' +
-          '<button type="button" class="czone__zoom" data-image-zoom aria-label="크게 보기">' +
+          '<button type="button" class="czone__zoom" data-image-zoom ' +
+          'aria-label="제품 사진 — 눌러서 크게 보기 · 바꾸기 · 저장">' +
           (image.url
             ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
             : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">') +
           "</button>" +
-          '<button type="button" class="img-thumb__x" data-image-remove aria-label="사진 빼기">✕</button>' +
           "</div>"
       )
       .join("");
     return (
       '<div class="pdshot czone" data-detail-images>' +
       '<div class="czone__grid">' + thumbs + "</div>" +
-      '<button type="button" class="czone__add" data-image-add>' +
-      "<span>＋</span>제품 이미지 넣기</button>" +
       "</div>"
     );
   }
@@ -393,8 +405,14 @@ const Pipeline = (() => {
 
     const listOf = () => (((Store.getProduct(product.id) || {}).concept || {}).images || []).slice();
 
-    function append(entries) {
-      Store.setConcept(product.id, "images", listOf().concat(entries));
+    /* 자리 하나를 정해 두고 갈아 끼운다. -1 이면 뒤에 붙인다. */
+    let slot = -1;
+
+    function put(entries) {
+      const list = listOf();
+      if (slot >= 0 && list[slot]) list.splice(slot, 1, entries[0]);
+      else entries.forEach((entry) => list.push(entry));
+      Store.setConcept(product.id, "images", list);
       App.render();
     }
 
@@ -403,7 +421,7 @@ const Pipeline = (() => {
       Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
         (results) => {
           const made = results.filter(Boolean).map((r) => ({ id: r.id, url: "" }));
-          if (made.length) append(made);
+          if (made.length) put(made);
           const msg = document.querySelector("[data-ipick-msg]");
           if (msg) msg.textContent = made.length + "장 담았습니다.";
         }
@@ -411,33 +429,42 @@ const Pipeline = (() => {
       return files.length + "장 줄이는 중…";
     }
 
-    zone.querySelector("[data-image-add]").addEventListener("click", () => {
+    function pick(at) {
+      slot = at;
       UI.openImagePicker({
-        title: "제품 이미지 넣기",
+        title: at >= 0 ? "제품 이미지 바꾸기" : "제품 이미지 넣기",
         onFiles: takeFiles,
         onUrl: (safe) => {
-          append([{ id: "url" + Date.now().toString(36), url: safe }]);
+          put([{ id: "url" + Date.now().toString(36), url: safe }]);
           return "주소를 넣었습니다.";
         },
       });
-    });
+    }
 
-    grid.addEventListener("click", (event) => {
-      const item = event.target.closest(".czone__item");
-      if (!item) return;
-      const index = Number(item.dataset.imageIndex);
+    const add = zone.querySelector("[data-image-add]");
+    if (add) add.addEventListener("click", () => pick(-1));
 
-      if (event.target.closest("[data-image-zoom]")) {
+    if (grid) {
+      grid.addEventListener("click", (event) => {
+        const item = event.target.closest(".czone__item");
+        if (!item || !event.target.closest("[data-image-zoom]")) return;
+        const index = Number(item.dataset.imageIndex);
         const image = listOf()[index];
-        if (image) UI.openImage(image, { title: product.name, name: product.name });
-        return;
-      }
-      if (!event.target.matches("[data-image-remove]")) return;
-      const list = listOf();
-      list.splice(index, 1);
-      Store.setConcept(product.id, "images", list);
-      App.render();
-    });
+        if (!image) return;
+
+        UI.openImage(image, {
+          title: product.name,
+          name: product.name,
+          onReplace: () => pick(index),
+          onRemove: () => {
+            const list = listOf();
+            list.splice(index, 1);
+            Store.setConcept(product.id, "images", list);
+            App.render();
+          },
+        });
+      });
+    }
 
     Images.hydrate(zone);
   }
