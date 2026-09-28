@@ -500,10 +500,21 @@ const Concept = (() => {
             if (data.total != null) count.value = String(data.total);
             row.dataset.trend = (data.trend || []).length ? JSON.stringify(data.trend) : "";
             trend.innerHTML = sparkline(data.trend || []);
-            if (data.note) {
+
+            /* 막대가 왜 안 나오는지 말해 주지 않으면, 눌러 놓고 고장인 줄
+               안다. 직접 누른 때만 알린다 — 줄마다 뜨면 잔소리가 된다. */
+            const notes = [];
+            if (data.note) notes.push(data.note);
+            if (overwrite && data.total == null) {
+              notes.push("검색광고에 이 키워드 기록이 없습니다.");
+            }
+            if (overwrite && !(data.trend || []).length) {
+              notes.push("추이 막대는 검색어트렌드 열쇠를 넣어야 나옵니다.");
+            }
+            if (notes.length) {
               trend.insertAdjacentHTML(
                 "beforeend",
-                '<span class="spark__cap">' + UI.escapeHtml(data.note) + "</span>"
+                '<span class="spark__cap">' + UI.escapeHtml(notes.join(" ")) + "</span>"
               );
             }
             save();
