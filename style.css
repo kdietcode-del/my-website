@@ -2105,7 +2105,10 @@ body.is-locked #settings-btn { display: none; }
   .cboard__name { font-size: 15px; margin: 1px 0 2px; }
   .ctext--lead { font-size: 10px; font-weight: 600; }
   .cboard__shot .czone__item { aspect-ratio: 3 / 4; }
-  .cspecs { gap: 1px; }
+  /* A4 한 장의 폭은 CSS 로 726px 쯤이다. 그래서 좁은 화면 규칙(900px
+     이하)이 인쇄에도 걸린다. 거기서 제원을 아래 줄로 내리도록 해 둔 것이
+     여기까지 따라와, 제원이 제자리에서 사라져 보였다. 다시 못박는다. */
+  .cspecs { grid-column: 3; grid-row: 1; align-self: start; gap: 1px; }
   .cspec { grid-template-columns: 16mm minmax(0, 1fr); }
   .cspec__label, .cspec__value { padding: 1px 2px; font-size: 8.5px; border: none; }
 
@@ -2155,4 +2158,27 @@ body.is-locked #settings-btn { display: none; }
 
   /* 광고소재 */
   .czone__grid { grid-template-columns: repeat(auto-fill, minmax(16mm, 1fr)); gap: 1.5mm; }
+}
+
+/* 기획서 인쇄 — 여기도 A4 폭(약 726px)이 좁은 화면 규칙에 걸린다.
+   그대로 두면 제출 양식 표가 카드로 쪼개지고 사진이 위로 올라간다. */
+@media print {
+  .psheet { border: none; padding: 0; }
+  .ptop { grid-template-columns: 34mm minmax(0, 1fr); gap: 5mm; }
+  .ptop > .photos .czone__grid { grid-template-columns: 1fr; }
+  .ptop > .photos .czone__item { aspect-ratio: 3 / 4; }
+
+  .ptable { display: table; }
+  .ptable thead { display: table-header-group; }
+  .ptable tbody { display: table-row-group; }
+  .ptable tfoot { display: table-footer-group; }
+  .ptable tr { display: table-row; margin: 0; border: none; border-radius: 0; }
+  .ptable th, .ptable td {
+    display: table-cell;
+    border: 1px solid var(--grid);
+  }
+  .psum__ask { white-space: nowrap; }
+  .prow { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; }
+  .pcombo { grid-template-columns: minmax(0, 1fr) 140px; }
+  .pstep { break-inside: avoid; }
 }
