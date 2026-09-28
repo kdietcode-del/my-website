@@ -243,6 +243,7 @@ const Store = (() => {
           targetDate: "",
           targetPrice: null,
           efficacyType: "",
+          todos: [],
         },
         p
       );
@@ -557,11 +558,85 @@ const Store = (() => {
     return PLAN_STEPS.filter((step) => ((plan.steps[step.key] || {}).answer || {}).text).length;
   }
 
+  /* 제품마다 붙는 할 일. 단계 체크리스트에 안 들어가는, 지금 당장 할 것들 —
+     "제조사에 전화", "샘플 택배 확인" 같은 것.
+
+     저장하는 곳만 다르고 다루는 방식은 아이디어 판과 같다. */
+  function cleanTodos(list) {
+    return (list || [])
+      .filter((t) => t && typeof t === "object")
+      .map((t) =>
+        Object.assign({ id: uid(), text: "", done: false, createdAt: nowISO() }, t, {
+          text: typeof t.text === "string" ? t.text : "",
+          done: !!t.done,
+        })
+      );
+  }
+
+  function productTodos(productId) {
+    const product = getProduct(productId);
+    return product ? product.todos : [];
+  }
+
+  function addProductTodo(productId, text) {
+    const product = getProduct(productId);
+    if (!product) return null;
+    const todo = { id: uid(), text: String(text || "").trim(), done: false, createdAt: nowISO() };
+    product.todos.push(todo);
+    touchProduct(productId);
+    save();
+    return todo;
+  }
+
+  function updateProductTodo(productId, id, patch) {
+    const product = getProduct(productId);
+    if (!product) return null;
+    const todo = product.todos.find((t) => t.id === id);
+    if (!todo) return null;
+    Object.assign(todo, patch);
+    touchProduct(productId);
+    save();
+    return todo;
+  }
+
+  function removeProductTodo(productId, id) {
+    const product = getProduct(productId);
+    if (!product) return;
+    product.todos = product.todos.filter((t) => t.id !== id);
+    touchProduct(productId);
+    save();
+  }
+
+  function clearDoneProductTodos(productId) {
+    const product = getProduct(productId);
+    if (!product) return 0;
+    const before = product.todos.length;
+    product.todos = product.todos.filter((t) => !t.done);
+    touchProduct(productId);
+    save();
+    return before - product.todos.length;
+  }
+
+  function moveProductTodo(productId, id, to) {
+    const product = getProduct(productId);
+    if (!product) return;
+    const from = product.todos.findIndex((t) => t.id === id);
+    if (from < 0) return;
+    const end = Math.max(0, Math.min(product.todos.length - 1, to));
+    const [item] = product.todos.splice(from, 1);
+    product.todos.splice(end, 0, item);
+    touchProduct(productId);
+    save();
+  }
+
   /* ---------- 지금 해야할 일 ----------
 
      어느 아이디어에도 안 붙는 일들이 있다. 제조사에 전화하기, 샘플 받아
      보기 같은 것. 그런 것을 적을 데가 없어 머리에만 있었다. */
   function normalizeTodos() {
+    state.products.forEach((p) => {
+      p.todos = cleanTodos(p.todos);
+    });
     state.todos = (state.todos || [])
       .filter((t) => t && typeof t === "object")
       .map((t) =>
@@ -1125,6 +1200,12 @@ const Store = (() => {
     removeTodo,
     clearDoneTodos,
     moveTodo,
+    productTodos,
+    addProductTodo,
+    updateProductTodo,
+    removeProductTodo,
+    clearDoneProductTodos,
+    moveProductTodo,
     setPlan,
     getPlan,
     planFilled,

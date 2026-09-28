@@ -255,6 +255,11 @@ const Pipeline = (() => {
       "</div>" +
       "</div>" +
       '<section class="summary" id="product-summary">' + summaryHtml(product) + "</section>" +
+      /* 단계 체크리스트에 안 들어가는, 지금 당장 할 것들. 단계 앞에 둔다. */
+      UI.todosHtml(product.todos, {
+        title: "지금 해야할 일",
+        placeholder: "이 제품에서 지금 할 일을 적고 Enter",
+      }) +
       '<div class="stage-list">' +
       product.stages.map((stage) => stageHtml(product, stage)).join("") +
       "</div>"
@@ -357,6 +362,14 @@ const Pipeline = (() => {
     });
     root.querySelector('[data-act="edit"]').addEventListener("click", () => openEdit(product.id));
     root.querySelector('[data-act="remove"]').addEventListener("click", () => remove(product.id));
+
+    UI.bindTodos(root, {
+      add: (text) => Store.addProductTodo(product.id, text),
+      update: (id, patch) => Store.updateProductTodo(product.id, id, patch),
+      remove: (id) => Store.removeProductTodo(product.id, id),
+      clearDone: () => Store.clearDoneProductTodos(product.id),
+      move: (id, to) => Store.moveProductTodo(product.id, id, to),
+    });
 
     root.querySelectorAll(".stage").forEach((node) => bindStage(root, product, node));
     growAll(root);

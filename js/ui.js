@@ -329,6 +329,167 @@ const UI = (() => {
     }));
   }
 
+  /* ---------- 지금 해야할 일 ----------
+
+     아이디어 판과 제품 보드가 같은 모양을 쓴다. 한쪽만 고치면 두 화면이
+     달라지므로 여기 한 벌만 둔다. 어디에 저장하느냐만 부르는 쪽이 정한다.
+
+     api = { list, add, update, remove, clearDone, move } */
+
+  function todosHtml(todos, options) {
+    const o = options || {};
+    const list = todos || [];
+    const left = list.filter((t) => !t.done).length;
+    const done = list.length - left;
+
+    const rows = list
+      .map(
+        (todo) =>
+          '<li class="todo' + (todo.done ? " todo--done" : "") + '" data-todo="' +
+          escapeHtml(todo.id) + '">' +
+          '<button type="button" class="todo__grip" data-todo-grip draggable="true" ' +
+          'aria-label="' + escapeHtml(todo.text || "이 할 일") +
+          ' 순서 바꾸기. 끌어서 옮기거나 위·아래 화살표를 누르세요"><span aria-hidden="true">⠿</span></button>' +
+          '<label class="todo__check"><input type="checkbox" data-todo-done' +
+          (todo.done ? " checked" : "") + ' aria-label="끝냈는지 표시"></label>' +
+          '<input type="text" class="todo__text" data-todo-text value="' +
+          escapeHtml(todo.text) + '" aria-label="할 일">' +
+          '<button type="button" class="icon-btn" data-todo-remove aria-label="이 할 일 지우기">✕</button>' +
+          "</li>"
+      )
+      .join("");
+
+    return (
+      '<section class="todos" data-todos>' +
+      '<header class="todos__head">' +
+      '<h3 class="todos__title">' + escapeHtml(o.title || "지금 해야할 일") +
+      (left ? '<span class="todos__left">' + left + "</span>" : "") +
+      "</h3>" +
+      (done
+        ? '<button type="button" class="btn btn--ghost btn--sm" data-todo-clear>끝낸 일 ' +
+          done + "건 치우기</button>"
+        : "") +
+      "</header>" +
+      (rows ? '<ul class="todos__list">' + rows + "</ul>" : "") +
+      '<div class="todos__add">' +
+      '<input type="text" class="input" data-todo-new placeholder="' +
+      escapeHtml(o.placeholder || "할 일을 적고 Enter") + '" aria-label="할 일 추가">' +
+      '<button type="button" class="btn btn--ghost btn--sm" data-todo-add>추가</button>' +
+      "</div>" +
+      "</section>"
+    );
+  }
+
+  function bindTodos(root, api) {
+    const wrap = root.querySelector("[data-todos]");
+    if (!wrap) return;
+    const box = wrap.querySelector("[data-todo-new]");
+
+    function add() {
+      const text = box.value.trim();
+      if (!text) return;
+      api.add(text);
+      box.value = "";
+      App.render();
+      const fresh = document.querySelector("[data-todo-new]");
+      if (fresh) fresh.focus();
+    }
+
+    box.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      add();
+    });
+    wrap.querySelector("[data-todo-add]").addEventListener("click", add);
+
+    const clear = wrap.querySelector("[data-todo-clear]");
+    if (clear) {
+      clear.addEventListener("click", () => {
+        const gone = api.clearDone();
+        App.render();
+        toast(gone + "건을 치웠습니다.");
+      });
+    }
+
+    wrap.addEventListener("change", (event) => {
+      const row = event.target.closest(".todo");
+      if (!row) return;
+      if (event.target.matches("[data-todo-done]")) {
+        api.update(row.dataset.todo, { done: event.target.checked });
+        App.render();
+        return;
+      }
+      if (event.target.matches("[data-todo-text]")) {
+        api.update(row.dataset.todo, { text: event.target.value.trim() });
+      }
+    });
+
+    wrap.addEventListener("click", (event) => {
+      if (!event.target.matches("[data-todo-remove]")) return;
+      api.remove(event.target.closest(".todo").dataset.todo);
+      App.render();
+    });
+
+    bindTodoReorder(wrap, api);
+  }
+
+  /* 순서 바꾸기 — 손잡이를 잡았을 때만 끌리게 해서, 글자를 고르려다 줄이
+     딸려가지 않게 한다. 끌기는 키보드로 못 하므로 ↑ ↓ 도 받는다. */
+  function bindTodoReorder(wrap, api) {
+    const list = wrap.querySelector(".todos__list");
+    if (!list) return;
+    let dragging = null;
+
+    function saveOrder() {
+      Array.from(list.querySelectorAll(".todo")).forEach((row, index) => {
+        api.move(row.dataset.todo, index);
+      });
+    }
+
+    list.querySelectorAll(".todo").forEach((row) => {
+      const grip = row.querySelector("[data-todo-grip]");
+      if (!grip) return;
+
+      grip.addEventListener("dragstart", (event) => {
+        dragging = row;
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        try {
+          event.dataTransfer.setData("text/plain", row.dataset.todo);
+        } catch (e) {
+          /* 일부 브라우저는 비어 있으면 끌기를 시작하지 않는다 */
+        }
+      });
+
+      grip.addEventListener("dragend", () => {
+        if (dragging) dragging.classList.remove("is-dragging");
+        dragging = null;
+        saveOrder();
+      });
+
+      row.addEventListener("dragover", (event) => {
+        if (!dragging || dragging === row) return;
+        event.preventDefault();
+        const box = row.getBoundingClientRect();
+        const below = event.clientY > box.top + box.height / 2;
+        list.insertBefore(dragging, below ? row.nextSibling : row);
+      });
+
+      grip.addEventListener("keydown", (event) => {
+        const step = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        const rows = Array.from(list.querySelectorAll(".todo"));
+        api.move(row.dataset.todo, rows.indexOf(row) + step);
+        App.render();
+        const moved = document.querySelector('.todo[data-todo="' + row.dataset.todo + '"]');
+        if (moved) moved.querySelector("[data-todo-grip]").focus();
+      });
+    });
+
+    list.addEventListener("drop", (event) => event.preventDefault());
+  }
+
   /* ---------- 이미지 넣는 창 ----------
 
      버튼을 누르면 곧바로 파일 고르는 창이 떴다. 그러면 초점이 그쪽으로 가
@@ -774,6 +935,8 @@ const UI = (() => {
     openForm,
     confirmAction,
     openImagePicker,
+    todosHtml,
+    bindTodos,
     imagesControl,
     bindImages,
     collectImages,
