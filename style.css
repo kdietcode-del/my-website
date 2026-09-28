@@ -506,8 +506,23 @@ a { color: var(--accent); }
 
 /* ---------- 제품 카드 ---------- */
 
-.product-card { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
-.product-card:hover { border-color: var(--line); box-shadow: var(--shadow); }
+/* 제품 고르는 카드 — 사진과 이름뿐이다. 단계와 진행률은 들어가면 다 나온다. */
+.product-card { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; gap: 12px; }
+.product-card:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+.product-card__shot {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+/* 화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다. */
+.product-card__shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.product-card__blank { font-size: 1.75rem; opacity: 0.25; }
+.product-card .card__title { font-size: 1rem; }
+
+/* 컨셉보드 목록은 예전 그대로 — 채운 항목 수를 보여 준다 */
 .product-card__stage { font-size: 0.8125rem; color: var(--text-2); }
 .product-card__counts { font-size: 0.8125rem; color: var(--muted); }
 .dot { margin: 0 6px; }

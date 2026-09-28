@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="bycera">
+  <!-- 흰 바탕. 탭 배경이 흰색일 때 타일이 사라지지 않도록 옅은 테두리를 둔다. -->
+  <rect width="64" height="64" rx="12" fill="#ffffff"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="11.25" fill="none" stroke="#e3e3e3" stroke-width="1.5"/>
+  <text x="32" y="32"
+        text-anchor="middle" dominant-baseline="central"
+        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="16.5" font-weight="700" letter-spacing="-0.6"
+        fill="#141414">bycera</text>
+</svg>

@@ -96,41 +96,21 @@ const Pipeline = (() => {
 
   /* ---------- 전체 목록 화면 ---------- */
 
+  /* 고르는 화면이다. 단계와 진행률은 안에 들어가면 다 나온다. 여기서는
+     어느 제품인지만 알면 되고, 그건 사진과 이름이 가장 빠르다. */
   function productCardHtml(product) {
-    const progress = Store.productProgress(product);
-    const stageMeta = UI.stageMeta(progress.currentStage);
-    const dday = UI.daysUntil(product.targetDate);
-    let ddayHtml = "";
-    if (dday !== null) {
-      const text = dday === 0 ? "D-DAY" : dday > 0 ? "D-" + dday : "D+" + Math.abs(dday);
-      ddayHtml = '<span class="chip ' + (dday < 0 ? "chip--late" : "") + '">' + text + "</span>";
-    }
+    const image = (((product.concept || {}).images) || [])[0];
+    const shot = image
+      ? image.url
+        ? '<img src="' + UI.escapeHtml(UI.safeUrl(image.url)) + '" alt="" loading="lazy">'
+        : '<img data-img-id="' + UI.escapeHtml(image.id) + '" alt="" loading="lazy">'
+      : '<span class="product-card__blank" aria-hidden="true">🧴</span>';
 
     return (
       '<article class="card product-card" data-id="' + product.id + '" tabindex="0" role="button" ' +
       'aria-label="' + UI.escapeHtml(product.name) + ' 보드 열기">' +
-      '<header class="card__head">' +
-      (UI.efficacyLabel(product.efficacyType)
-        ? UI.chip(UI.efficacyLabel(product.efficacyType), "chip--eff")
-        : "") +
-      (product.category
-        ? UI.chip(
-            UI.categoryLabel(product.category),
-            "chip--cat chip--cat-" + UI.escapeHtml(product.category)
-          )
-        : "") +
-      ddayHtml +
-      (product.sample ? '<span class="chip chip--sample">샘플</span>' : "") +
-      "</header>" +
+      '<div class="product-card__shot">' + shot + "</div>" +
       '<h3 class="card__title">' + UI.escapeHtml(product.name) + "</h3>" +
-      '<p class="product-card__stage">지금 단계 · <strong>' + UI.escapeHtml(stageMeta.name) + "</strong></p>" +
-      UI.meter(progress.ratio, { size: "lg", label: product.name }) +
-      '<p class="product-card__counts">' +
-      "단계 " + progress.stagesDone + " / " + product.stages.length + " 완료" +
-      '<span class="dot" aria-hidden="true">·</span>' +
-      "할 일 " + progress.done + " / " + progress.total +
-      "</p>" +
-      UI.stageStrip(product) +
       "</article>"
     );
   }
@@ -347,6 +327,8 @@ const Pipeline = (() => {
       overviewHtml();
 
     bindOverview(root);
+    /* 카드 사진은 브라우저 안 저장소에 있다. 주소를 붙여 줘야 뜬다. */
+    Images.hydrate(root);
   }
 
   function bindOverview(root) {
