@@ -584,10 +584,12 @@ a { color: var(--accent); }
 
 /* 블록이 좁아지면 메모를 할 일 오른쪽에 두지 않고 아래로 내린다 */
 @container (max-width: 420px) {
-  .task { grid-template-columns: auto minmax(0, 1fr) auto; }
+  /* 좁은 화면에서는 이름이 한 줄을 다 쓰고, 메모가 그 아래로 간다 */
+  .task { grid-template-columns: auto auto minmax(0, 1fr) auto; }
   .task__grip { grid-column: 1; grid-row: 1; }
-  .task__label { grid-column: 2; grid-row: 1; }
-  .task .icon-btn { grid-column: 3; grid-row: 1; opacity: 1; }
+  .task__check { grid-column: 2; grid-row: 1; }
+  .task__name { grid-column: 3; grid-row: 1; }
+  .task .icon-btn { grid-column: 4; grid-row: 1; opacity: 1; }
   .task__memo { grid-column: 1 / -1; grid-row: 2; }
 }
 .stage--doing { border-left-color: var(--warning); }
@@ -633,9 +635,9 @@ a { color: var(--accent); }
 /* 손잡이 | 할 일 | 메모 | 삭제 — 메모 칸은 항상 펼쳐져 있다 */
 .task {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: start;
-  gap: 10px;
+  gap: 6px;
   padding: 5px 0;
   border-bottom: 1px solid var(--grid);
 }
@@ -660,16 +662,29 @@ a { color: var(--accent); }
 .task.is-over { background: var(--surface-2); }
 .task:last-child { border-bottom: none; }
 
-.task__label {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 0.9375rem;
-  padding-top: 6px;
+/* 체크와 이름. 이름은 눌러서 바로 고친다 — 기본 목록은 출발점일 뿐이고,
+   제품마다 실제로 해야 할 일은 조금씩 다르다. */
+.task__check {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex: none;
+  margin-top: 9px;
 }
-.task__label input { width: 16px; height: 16px; accent-color: var(--accent); flex: none; margin-top: 3px; }
-.task--done .task__label span { color: var(--muted); text-decoration: line-through; }
+.task__name {
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--text);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 5px 7px;
+  min-width: 0;
+  width: 100%;
+}
+.task__name:hover { background: var(--surface-2); }
+.task__name:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.task--done .task__name { color: var(--muted); text-decoration: line-through; }
 
 .task__memo {
   font: inherit;
@@ -1571,10 +1586,12 @@ body.is-locked #settings-btn { display: none; }
   .stage__fields { grid-template-columns: 1fr; }
   /* 좁은 화면에서는 메모를 할 일 아래로 내린다.
      칸을 명시하지 않으면 삭제 버튼이 메모 아래 줄로 밀려난다. */
-  .task { grid-template-columns: auto minmax(0, 1fr) auto; }
+  /* 좁은 화면에서는 이름이 한 줄을 다 쓰고, 메모가 그 아래로 간다 */
+  .task { grid-template-columns: auto auto minmax(0, 1fr) auto; }
   .task__grip { grid-column: 1; grid-row: 1; }
-  .task__label { grid-column: 2; grid-row: 1; }
-  .task .icon-btn { grid-column: 3; grid-row: 1; }
+  .task__check { grid-column: 2; grid-row: 1; }
+  .task__name { grid-column: 3; grid-row: 1; }
+  .task .icon-btn { grid-column: 4; grid-row: 1; }
   .task__memo { grid-column: 1 / -1; grid-row: 2; }
   .bar-row { grid-template-columns: 1fr auto; gap: 4px 10px; }
   .bar-row__label { grid-column: 1 / -1; white-space: normal; }
@@ -1901,7 +1918,6 @@ body.is-locked #settings-btn { display: none; }
   margin-bottom: 20px;
 }
 .pdtop__main { display: flex; flex-direction: column; gap: 0; min-width: 0; }
-.pdtop__main .summary { margin-bottom: 16px; }
 .pdtop__main .todos { margin-bottom: 0; }
 
 .pdshot {

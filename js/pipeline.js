@@ -131,33 +131,6 @@ const Pipeline = (() => {
 
   /* ---------- 단일 제품 상세 화면 ---------- */
 
-  function summaryHtml(product) {
-    const progress = Store.productProgress(product);
-    const stageMeta = UI.stageMeta(progress.currentStage);
-    return (
-      '<div class="summary__left">' +
-      '<p class="summary__label">전체 진행률</p>' +
-      '<p class="summary__value">' + Math.round(progress.ratio * 100) + "%</p>" +
-      UI.meter(progress.ratio, { size: "lg", hideValue: true, label: product.name }) +
-      '<p class="summary__counts">할 일 ' + progress.done + " / " + progress.total +
-      '<span class="dot" aria-hidden="true">·</span>단계 ' + progress.stagesDone + " / " +
-      product.stages.length + " 완료</p>" +
-      "</div>" +
-      '<dl class="summary__meta">' +
-      metaRow("지금 단계", stageMeta.name) +
-      metaRow("담당자", product.owner || "—") +
-      metaRow("목표 런칭일", UI.formatDate(product.targetDate) || "—") +
-      metaRow("목표 판매가", UI.formatPrice(product.targetPrice)) +
-      "</dl>"
-    );
-  }
-
-  function metaRow(label, value) {
-    return (
-      "<div><dt>" + UI.escapeHtml(label) + "</dt><dd>" + UI.escapeHtml(value) + "</dd></div>"
-    );
-  }
-
   function stageHeaderHtml(product, stage) {
     const meta = UI.stageMeta(stage.key);
     const ratio = Store.stageProgress(stage);
@@ -187,10 +160,12 @@ const Pipeline = (() => {
               '<button type="button" class="task__grip" data-task-grip draggable="true" ' +
               'aria-label="' + UI.escapeHtml(task.label) + ' 순서 바꾸기. 끌어서 옮기거나 위·아래 화살표를 누르세요">' +
               '<span aria-hidden="true">⠿</span></button>' +
-              '<label class="task__label">' +
-              '<input type="checkbox" data-task="' + task.id + '"' + (task.done ? " checked" : "") + ">" +
-              "<span>" + UI.escapeHtml(task.label) + "</span>" +
-              "</label>" +
+              '<input type="checkbox" class="task__check" data-task="' + task.id + '"' +
+              (task.done ? " checked" : "") + ' aria-label="' +
+              UI.escapeHtml(task.label) + ' 끝냈는지 표시">' +
+              /* 이름도 그 자리에서 고친다. 기본 목록은 출발점일 뿐이다. */
+              '<input type="text" class="task__name" data-task-name="' + task.id +
+              '" value="' + UI.escapeHtml(task.label) + '" aria-label="할 일 이름">' +
               /* 항목별 메모는 접지 않고 항상 펼쳐 둔다 — 내용이 길어지면 칸이 따라 늘어난다. */
               '<textarea class="task__memo" rows="1" data-task-memo="' + task.id +
               '" placeholder="메모" aria-label="' + UI.escapeHtml(task.label) + ' 메모">' +
@@ -256,7 +231,6 @@ const Pipeline = (() => {
       "</div>" +
       '<div class="pdtop">' +
       '<div class="pdtop__main">' +
-      '<section class="summary" id="product-summary">' + summaryHtml(product) + "</section>" +
       /* 단계 체크리스트에 안 들어가는, 지금 당장 할 것들. 단계 앞에 둔다. */
       UI.todosHtml(product.todos, {
         title: "지금 해야할 일",
@@ -306,12 +280,6 @@ const Pipeline = (() => {
     const fresh = root.querySelector('[data-stage="' + stageKey + '"]');
     bindStage(root, product, fresh);
     growAll(fresh);
-    refreshSummary(root, product);
-  }
-
-  function refreshSummary(root, product) {
-    const node = root.querySelector("#product-summary");
-    if (node) node.innerHTML = summaryHtml(product);
   }
 
   /* ---------- 렌더 ---------- */
@@ -484,8 +452,15 @@ const Pipeline = (() => {
       box.addEventListener("change", () => {
         Store.toggleTask(product.id, stageKey, box.dataset.task);
         box.closest(".task").classList.toggle("task--done", box.checked);
-        refreshStage(root, product, stageKey);
         refreshSummary(root, product);
+      });
+    });
+
+    node.querySelectorAll("[data-task-name]").forEach((box) => {
+      box.addEventListener("change", () => {
+        const task = Store.renameTask(product.id, stageKey, box.dataset.taskName, box.value);
+        /* 빈 이름은 받지 않는다. 지우려면 ✕ 를 누르면 된다. */
+        if (task) box.value = task.label;
       });
     });
 

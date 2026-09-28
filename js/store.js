@@ -1018,6 +1018,22 @@ const Store = (() => {
     return true;
   }
 
+  /* 할 일의 이름도 고칠 수 있어야 한다. 기본 목록은 출발점일 뿐이고, 제품마다
+     실제로 해야 할 일은 조금씩 다르다. 빈 이름으로 만들지는 않는다 — 그건
+     지우는 것이지 고치는 것이 아니다. */
+  function renameTask(productId, stageKey, taskId, label) {
+    const stage = getStage(productId, stageKey);
+    if (!stage) return null;
+    const task = stage.tasks.find((t) => t.id === taskId);
+    if (!task) return null;
+    const next = String(label || "").trim();
+    if (!next) return task;
+    task.label = next;
+    touchProduct(productId);
+    save();
+    return task;
+  }
+
   function setTaskMemo(productId, stageKey, taskId, memo) {
     const stage = getStage(productId, stageKey);
     if (!stage) return;
@@ -1182,6 +1198,7 @@ const Store = (() => {
     toggleTask,
     addTask,
     removeTask,
+    renameTask,
     setTaskMemo,
     setTaskOrder,
     moveTask,
