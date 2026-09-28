@@ -490,6 +490,115 @@ const UI = (() => {
     list.addEventListener("drop", (event) => event.preventDefault());
   }
 
+  /* ---------- 제품 사진 칸 ----------
+
+     사진 아래에 '넣기' 단추를 따로 두지 않는다. 사진 자체가 누르는 자리이고,
+     누르면 크게 뜨면서 바꾸기 · 빼기 · 저장이 거기 다 있다. 한 장 더 넣는
+     자리는 사진과 같은 크기의 빈 칸으로 뒤에 붙는다.
+
+     런칭 보드 · 기획서 · 컨셉보드가 같은 것을 쓴다. 세 벌을 따로 두면
+     한쪽만 고쳐져 갈린다. */
+
+  function photoZone(images, options) {
+    const o = options || {};
+    const list = images || [];
+    const label = o.label || "제품 이미지 넣기";
+
+    const thumbs = list
+      .map(
+        (image, index) =>
+          '<div class="czone__item" data-image-index="' + index + '">' +
+          '<button type="button" class="czone__zoom" data-image-zoom ' +
+          'aria-label="' + escapeHtml(o.title || "사진") + ' — 눌러서 크게 보기 · 바꾸기 · 저장">' +
+          (image.url
+            ? '<img src="' + escapeHtml(safeUrl(image.url)) + '" alt="" loading="lazy">'
+            : '<img data-img-id="' + escapeHtml(image.id) + '" alt="" loading="lazy">') +
+          "</button></div>"
+      )
+      .join("");
+
+    /* 사진이 없으면 빈 칸이 곧 넣는 자리다. 있으면 뒤에 작게 붙는다. */
+    const add =
+      '<button type="button" class="photo__add' + (list.length ? " photo__add--more" : "") +
+      '" data-image-add aria-label="' + escapeHtml(label) + '">' +
+      '<span aria-hidden="true">＋</span>' +
+      (list.length ? "" : escapeHtml(label)) +
+      "</button>";
+
+    return (
+      '<div class="photos czone" data-photos>' +
+      '<div class="czone__grid">' + thumbs + add + "</div>" +
+      "</div>"
+    );
+  }
+
+  /* api = { list, save, title } — 어디에 담아 두는지는 부르는 쪽이 안다. */
+  function bindPhotoZone(root, api) {
+    const zone = root.querySelector("[data-photos]");
+    if (!zone) return;
+
+    /* 갈아 끼울 자리. -1 이면 뒤에 붙인다. */
+    let slot = -1;
+
+    function put(entries) {
+      const list = api.list();
+      if (slot >= 0 && list[slot]) list.splice(slot, 1, entries[0]);
+      else entries.forEach((entry) => list.push(entry));
+      api.save(list);
+    }
+
+    function takeFiles(files) {
+      if (!files.length) return "";
+      Promise.all(files.map((file) => Images.addFile(file).then((s) => s, () => null))).then(
+        (results) => {
+          const made = results.filter(Boolean).map((r) => ({ id: r.id, url: "" }));
+          if (made.length) put(made);
+          const msg = document.querySelector("[data-ipick-msg]");
+          if (msg) msg.textContent = made.length + "장 담았습니다.";
+        }
+      );
+      return files.length + "장 줄이는 중…";
+    }
+
+    function pick(at) {
+      slot = at;
+      openImagePicker({
+        title: at >= 0 ? "사진 바꾸기" : api.label || "제품 이미지 넣기",
+        onFiles: takeFiles,
+        onUrl: (safe) => {
+          put([{ id: "url" + Date.now().toString(36), url: safe }]);
+          return "주소를 넣었습니다.";
+        },
+      });
+    }
+
+    zone.addEventListener("click", (event) => {
+      if (event.target.closest("[data-image-add]")) {
+        pick(-1);
+        return;
+      }
+      const item = event.target.closest(".czone__item");
+      if (!item || !event.target.closest("[data-image-zoom]")) return;
+
+      const index = Number(item.dataset.imageIndex);
+      const image = api.list()[index];
+      if (!image) return;
+
+      openImage(image, {
+        title: api.title,
+        name: api.title,
+        onReplace: () => pick(index),
+        onRemove: () => {
+          const list = api.list();
+          list.splice(index, 1);
+          api.save(list);
+        },
+      });
+    });
+
+    Images.hydrate(zone);
+  }
+
   /* ---------- 이미지 넣는 창 ----------
 
      버튼을 누르면 곧바로 파일 고르는 창이 떴다. 그러면 초점이 그쪽으로 가
@@ -989,6 +1098,8 @@ const UI = (() => {
     openImagePicker,
     todosHtml,
     bindTodos,
+    photoZone,
+    bindPhotoZone,
     imagesControl,
     bindImages,
     collectImages,

@@ -1947,3 +1947,54 @@ body.is-locked #settings-btn { display: none; }
 .pdshot__empty:hover { border-color: var(--accent); color: var(--accent); }
 .pdshot__empty span { font-size: 1.25rem; line-height: 1; }
 .pdshot .czone__zoom { cursor: pointer; }
+
+/* ---------- 제품 사진 칸 (런칭 보드 · 기획서 · 컨셉보드 공용) ---------- */
+.photos { display: block; }
+.photos .czone__grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.photos .czone__item {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+/* 화장품 용기는 길쭉해서 꽉 채워 자르면 뚜껑이나 밑동이 날아간다 */
+.photos .czone__zoom img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.photo__add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.photo__add span { font-size: 1.25rem; line-height: 1; }
+.photo__add:hover { border-color: var(--accent); color: var(--accent); }
+/* 이미 사진이 있으면 한 줄짜리 얇은 칸으로 줄인다 — 사진이 주인공이다 */
+.photo__add--more { aspect-ratio: auto; padding: 8px; opacity: 0.6; }
+.photo__add--more:hover { opacity: 1; }
+
+/* 런칭 보드는 사진 칸을 흰 카드 안에 넣는다 */
+.pdshot, .pdtop > .photos {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+}
+
+@media (max-width: 900px) {
+  .pdtop > .photos .czone__grid,
+  .ptop > .photos .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .pdtop > .photos .czone__item,
+  .ptop > .photos .czone__item { aspect-ratio: 1; }
+}

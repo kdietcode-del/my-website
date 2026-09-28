@@ -294,7 +294,9 @@ const Concept = (() => {
       /* 머리 — 왼쪽에 제품 사진, 그 옆에 제품명, 오른쪽에 한 줄 제원.
          사진은 잘라내지 않고 통째로 보여 준다. */
       '<header class="cboard__head">' +
-      '<div class="cboard__shot">' + imageZone("images", c.images, "제품 이미지 넣기") + "</div>" +
+      '<div class="cboard__shot">' +
+      UI.photoZone(c.images, { title: product.name }) +
+      "</div>" +
       '<div class="cboard__title">' +
       '<p class="cboard__eyebrow">제품 컨셉보드</p>' +
       '<h2 class="cboard__name">' + UI.escapeHtml(product.name) + "</h2>" +
@@ -455,6 +457,14 @@ const Concept = (() => {
     bindKeywords(root, product);
     bindRivals(root, product);
     bindChecks(root, product);
+    UI.bindPhotoZone(root, {
+      title: product.name,
+      list: () => (((Store.getConcept(product.id) || {}).images) || []).slice(),
+      save: (list) => {
+        Store.setConcept(product.id, "images", list);
+        App.render();
+      },
+    });
     bindImages(root, product);
 
     Images.hydrate(root);
