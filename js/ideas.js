@@ -1,25 +1,14 @@
 /* ============================================================
-   1) 신제품 아이디어 — 떠오른 제품 아이디어와 타사 레퍼런스를 쌓는 판
+   1) 신제품 아이디어 — 떠오른 제품 아이디어를 쌓는 판
    ============================================================ */
 
 const Ideas = (() => {
-  const filters = { kind: "all", efficacyType: "all", category: "all", query: "" };
-
-  const KIND_OPTIONS = [
-    { value: "idea", label: "내 아이디어" },
-    { value: "reference", label: "타사 레퍼런스" },
-  ];
+  const filters = { efficacyType: "all", category: "all", query: "" };
 
   function fieldSpec() {
     return [
-      {
-        name: "kind",
-        label: "구분",
-        type: "radio",
-        options: KIND_OPTIONS,
-        span: 2,
-        hint: "내가 낸 아이디어인지, 참고하려고 모아둔 타사 사례인지 구분합니다.",
-      },
+      /* '내 아이디어 / 타사 레퍼런스' 구분은 뺐다. 실제로 갈라 쓰지 않았고,
+         칸만 하나 더 묻는 꼴이었다. */
       {
         name: "name",
         label: "제품명",
@@ -106,7 +95,7 @@ const Ideas = (() => {
     UI.openForm({
       title: "아이디어 추가",
       fields: fieldSpec(),
-      values: { kind: "idea", category: "", efficacyType: "", status: "" },
+      values: { category: "", efficacyType: "", status: "" },
       submitLabel: "판에 올리기",
       onSubmit: (data) => {
         Store.addIdea(data);
@@ -207,7 +196,6 @@ const Ideas = (() => {
   function visibleIdeas() {
     const query = filters.query.trim().toLowerCase();
     return Store.state.ideas.filter((idea) => {
-      if (filters.kind !== "all" && idea.kind !== filters.kind) return false;
       if (filters.efficacyType !== "all" && idea.efficacyType !== filters.efficacyType) return false;
       if (filters.category !== "all" && idea.category !== filters.category) return false;
       if (!query) return true;
@@ -250,15 +238,11 @@ const Ideas = (() => {
   }
 
   function cardHtml(idea) {
-    const isReference = idea.kind === "reference";
     const tags = (idea.tags || []).map((t) => UI.chip("#" + t)).join("");
     const efficacyName = UI.efficacyLabel(idea.efficacyType);
     const statusName = idea.status ? UI.statusLabel(idea.status) : "";
 
-    /* 대부분이 내 아이디어라 '내 아이디어' 배지는 달지 않는다.
-       예외인 타사 레퍼런스만 표시한다. */
     const head = [
-      isReference ? '<span class="kind kind--ref">타사 레퍼런스</span>' : "",
       efficacyName ? UI.chip(efficacyName, "chip--eff") : "",
       idea.category
         ? UI.chip(
@@ -334,20 +318,6 @@ const Ideas = (() => {
 
     const list = visibleIdeas();
     const total = Store.state.ideas.length;
-    const ownCount = Store.state.ideas.filter((i) => i.kind !== "reference").length;
-    const refCount = total - ownCount;
-
-    const segments = [
-      { key: "all", label: "전체 " + total },
-      { key: "idea", label: "내 아이디어 " + ownCount },
-      { key: "reference", label: "타사 레퍼런스 " + refCount },
-    ]
-      .map(
-        (seg) =>
-          '<button type="button" class="seg' + (filters.kind === seg.key ? " seg--on" : "") +
-          '" data-kind="' + seg.key + '">' + UI.escapeHtml(seg.label) + "</button>"
-      )
-      .join("");
 
     const efficacyOptions =
       '<option value="all">피부효능 전체</option>' +
@@ -379,7 +349,7 @@ const Ideas = (() => {
       "</div>" +
       UI.todosHtml(Store.state.todos) +
       '<div class="toolbar">' +
-      '<div class="segmented" role="group" aria-label="구분 필터">' + segments + "</div>" +
+      '<span class="toolbar__count">전체 ' + total + "건</span>" +
       '<select class="select" data-filter-efficacy aria-label="피부효능 필터">' + efficacyOptions + "</select>" +
       '<select class="select" data-filter-category aria-label="카테고리 필터">' + categoryOptions + "</select>" +
       '<input type="search" class="input" data-filter-query placeholder="제품명 · 한 줄 컨셉 · 성분 · 태그 검색" value="' +
@@ -463,13 +433,6 @@ const Ideas = (() => {
   function bind(root) {
     const createBtn = root.querySelector('[data-act="create"]');
     if (createBtn) createBtn.addEventListener("click", openCreate);
-
-    root.querySelectorAll("[data-kind]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        filters.kind = btn.dataset.kind;
-        App.render();
-      });
-    });
 
     const efficacySelect = root.querySelector("[data-filter-efficacy]");
     if (efficacySelect) {
