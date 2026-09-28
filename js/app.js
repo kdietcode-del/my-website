@@ -28,8 +28,8 @@ const App = (() => {
   /* short 는 좁은 화면에서만 쓴다. 긴 이름 그대로 두면 탭이 화면을 넘어
      옆으로 밀어야 보인다 — 어떤 탭이 있는지조차 모르게 된다. */
   const TABS = [
-    { key: "pipeline", label: "🚀 제품 런칭 상황보드", short: "🚀 런칭", view: () => Pipeline },
-    { key: "concept", label: "🎨 제품 컨셉보드", short: "🎨 컨셉", view: () => Concept },
+    { key: "pipeline", label: "🚀 제품 런칭 상황보드", short: "🚀 런칭 상황", view: () => Pipeline },
+    { key: "concept", label: "🎨 제품 컨셉보드", short: "🎨 컨셉 보드", view: () => Concept },
     { key: "ideas", label: "💡 신제품 아이디어", short: "💡 신제품 아이디어", view: () => Ideas },
   ];
 
