@@ -61,7 +61,7 @@ const Ideas = (() => {
       },
       {
         name: "efficacy",
-        label: "컨셉",
+        label: "한 줄 컨셉",
         type: "textarea",
         rows: 3,
         span: 2,
@@ -282,7 +282,7 @@ const Ideas = (() => {
       '<h3 class="card__title">' + UI.escapeHtml(idea.name) + "</h3>" +
       UI.thumbsHtml(idea.images, { limit: 4 }) +
       (idea.efficacy
-        ? '<div class="card__block"><h4 class="card__label">컨셉</h4><p>' +
+        ? '<div class="card__block"><h4 class="card__label">한 줄 컨셉</h4><p>' +
           UI.escapeHtml(idea.efficacy) + "</p></div>"
         : "") +
       (idea.ingredients
@@ -377,7 +377,7 @@ const Ideas = (() => {
       '<div class="segmented" role="group" aria-label="구분 필터">' + segments + "</div>" +
       '<select class="select" data-filter-efficacy aria-label="피부효능 필터">' + efficacyOptions + "</select>" +
       '<select class="select" data-filter-category aria-label="카테고리 필터">' + categoryOptions + "</select>" +
-      '<input type="search" class="input" data-filter-query placeholder="제품명 · 컨셉 · 성분 · 태그 검색" value="' +
+      '<input type="search" class="input" data-filter-query placeholder="제품명 · 한 줄 컨셉 · 성분 · 태그 검색" value="' +
       UI.escapeHtml(filters.query) + '" aria-label="검색">' +
       "</div>" +
       (list.length
