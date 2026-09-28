@@ -18,6 +18,7 @@ const Store = (() => {
     ideas: [],
     products: [],
     competitors: [],
+    todos: [],
     seeded: false,
     cleanupVersion: 0,
     seedVersion: 0,
@@ -45,6 +46,7 @@ const Store = (() => {
       ideas: state.ideas,
       products: state.products,
       competitors: state.competitors,
+      todos: state.todos,
     };
   }
 
@@ -61,6 +63,7 @@ const Store = (() => {
     state.ideas = (data && data.ideas) || [];
     state.products = (data && data.products) || [];
     state.competitors = (data && data.competitors) || [];
+    state.todos = (data && data.todos) || [];
     normalize();
     saveLocal();
   }
@@ -259,6 +262,7 @@ const Store = (() => {
       Object.assign({ id: uid(), productId: "", rating: 0, images: [], createdAt: nowISO() }, c)
     );
 
+    normalizeTodos();
     mergeConceptRivals();
 
     if (seededSome) {
@@ -551,6 +555,58 @@ const Store = (() => {
     const plan = (idea || {}).plan;
     if (!plan) return 0;
     return PLAN_STEPS.filter((step) => ((plan.steps[step.key] || {}).answer || {}).text).length;
+  }
+
+  /* ---------- 지금 해야할 일 ----------
+
+     어느 아이디어에도 안 붙는 일들이 있다. 제조사에 전화하기, 샘플 받아
+     보기 같은 것. 그런 것을 적을 데가 없어 머리에만 있었다. */
+  function normalizeTodos() {
+    state.todos = (state.todos || [])
+      .filter((t) => t && typeof t === "object")
+      .map((t) =>
+        Object.assign({ id: uid(), text: "", done: false, createdAt: nowISO() }, t, {
+          text: typeof t.text === "string" ? t.text : "",
+          done: !!t.done,
+        })
+      );
+  }
+
+  function addTodo(text) {
+    const todo = { id: uid(), text: String(text || "").trim(), done: false, createdAt: nowISO() };
+    state.todos.push(todo);
+    save();
+    return todo;
+  }
+
+  function updateTodo(id, patch) {
+    const todo = state.todos.find((t) => t.id === id);
+    if (!todo) return null;
+    Object.assign(todo, patch);
+    save();
+    return todo;
+  }
+
+  function removeTodo(id) {
+    state.todos = state.todos.filter((t) => t.id !== id);
+    save();
+  }
+
+  /* 끝낸 일을 한꺼번에 치운다 */
+  function clearDoneTodos() {
+    const before = state.todos.length;
+    state.todos = state.todos.filter((t) => !t.done);
+    save();
+    return before - state.todos.length;
+  }
+
+  function moveTodo(id, to) {
+    const from = state.todos.findIndex((t) => t.id === id);
+    if (from < 0) return;
+    const end = Math.max(0, Math.min(state.todos.length - 1, to));
+    const [item] = state.todos.splice(from, 1);
+    state.todos.splice(end, 0, item);
+    save();
   }
 
   /* 지금 어딘가에서 쓰이고 있는 이미지 열쇠 전부.
@@ -1006,6 +1062,7 @@ const Store = (() => {
           ideas: state.ideas,
           products: state.products,
           competitors: state.competitors,
+          todos: state.todos,
           images,
         },
         null,
@@ -1063,6 +1120,11 @@ const Store = (() => {
     productProgress,
     overallProgress,
     competitorsFor,
+    addTodo,
+    updateTodo,
+    removeTodo,
+    clearDoneTodos,
+    moveTodo,
     setPlan,
     getPlan,
     planFilled,

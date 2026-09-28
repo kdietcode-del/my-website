@@ -1804,3 +1804,73 @@ body.is-locked #settings-btn { display: none; }
   .pshot .czone__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   .pshot .czone__item { aspect-ratio: 1; }
 }
+
+/* ---------- 지금 해야할 일 ----------
+   어느 아이디어에도 안 붙는 일들. 목록보다 먼저 보이게 맨 위에 둔다. */
+.todos {
+  border: 1px solid var(--grid);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.todos__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.todos__title { font-size: 0.9375rem; display: flex; align-items: center; gap: 7px; }
+.todos__left {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.todos__list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.todo {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border-radius: var(--radius-sm);
+}
+.todo.is-dragging { opacity: 0.4; }
+.todo__grip {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: grab;
+  padding: 2px 4px;
+  font-size: 0.8125rem;
+  line-height: 1;
+  opacity: 0;
+}
+.todos__list:hover .todo__grip, .todo__grip:focus-visible { opacity: 1; }
+.todo__check { display: flex; align-items: center; }
+.todo__check input { width: 16px; height: 16px; }
+.todo__text {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 5px 7px;
+  background: none;
+  min-width: 0;
+}
+.todo__text:hover { background: var(--surface-2); }
+.todo__text:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+/* 끝낸 것은 지우지 않고 흐리게 둔다 — 오늘 뭘 했는지가 남아야 한다 */
+.todo--done .todo__text { color: var(--muted); text-decoration: line-through; }
+.todo .icon-btn { opacity: 0; }
+.todo:hover .icon-btn, .todo .icon-btn:focus-visible { opacity: 1; }
+
+.todos__add { display: flex; gap: 6px; margin-top: 10px; }
+.todos__add .input { flex: 1 1 auto; min-width: 0; max-width: none; padding: 7px 10px; font-size: 0.875rem; }
+
+@media print { .todos__add, .todo__grip, .todo .icon-btn { display: none !important; } }
