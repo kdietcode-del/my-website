@@ -608,7 +608,7 @@ const Concept = (() => {
         const node = UI.openModal(
           word + " — 월별 검색량",
           '<p class="settings__note">네이버 검색광고나 블랙키위 화면에서 본 월별 숫자를 옮겨 적으세요. ' +
-            "첫 칸에 숫자 여러 개를 한꺼번에 붙여넣으면 아래로 자동으로 채워집니다. " +
+            "PC와 모바일을 더한 값입니다. 첫 칸에 숫자 여러 개를 한꺼번에 붙여넣으면 아래로 자동으로 채워집니다. " +
             "오래된 달이 왼쪽 위입니다.</p>" +
             '<div class="tmonths">' + cells + "</div>",
           '<button type="button" class="btn btn--ghost" data-trend-clear>비우기</button>' +

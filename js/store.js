@@ -218,6 +218,7 @@ const Store = (() => {
         i
       );
       idea.category = migrateCategory(idea.category);
+      idea.plan = normalizePlan(idea.plan);
       /* seedId 는 나중에 생긴 필드다. 이름으로 되찾아 붙여 두지 않으면
          '이미 있는 항목' 검사가 빗나가 기본 목록이 한 번 더 들어간다. */
       if (!idea.seedId) {
@@ -323,6 +324,168 @@ const Store = (() => {
     });
   }
 
+
+  /* ---------- 기획서 7단계 ----------
+
+     신제품·브랜드 기획 프로세스 v1.0 의 일곱 단계를 아이디어마다 하나씩
+     들고 있는다. 칸이 많아 보이지만 대부분 비어 있어도 된다 — 채워진
+     만큼만 진행률로 센다. */
+
+  function planText(value) {
+    return { text: typeof (value || {}).text === "string" ? value.text : "" };
+  }
+
+  function planList(value, make, count) {
+    const list = Array.isArray(value) ? value.slice(0, count || 20) : [];
+    const out = list.map((item) => make(item || {}));
+    while (count && out.length < count) out.push(make({}));
+    return out;
+  }
+
+  function str(value) {
+    return typeof value === "string" ? value : "";
+  }
+
+  function normalizePlan(value) {
+    const p = value && typeof value === "object" ? value : {};
+    const s = p.steps && typeof p.steps === "object" ? p.steps : {};
+    const base = (key) => {
+      const node = s[key] && typeof s[key] === "object" ? s[key] : {};
+      return { answer: planText(node.answer), verdict: str(node.verdict), node };
+    };
+
+    const pain = base("pain");
+    const visual = base("visual");
+    const market = base("market");
+    const solution = base("solution");
+    const rivals = base("rivals");
+    const mark = base("mark");
+    const ad = base("ad");
+
+    const checks = (node, defs) => {
+      const src = node.checks && typeof node.checks === "object" ? node.checks : {};
+      const out = {};
+      defs.forEach((d) => {
+        out[d.key] = !!src[d.key];
+      });
+      return out;
+    };
+
+    return {
+      oneLine: planText(p.oneLine),
+      steps: {
+        pain: {
+          answer: pain.answer,
+          verdict: pain.verdict,
+          sentence: planText(pain.node.sentence),
+          checks: checks(pain.node, PAIN_CHECKS),
+        },
+        visual: {
+          answer: visual.answer,
+          verdict: visual.verdict,
+          grade: str(visual.node.grade),
+          before: planText(visual.node.before),
+          after: planText(visual.node.after),
+          refs: planList(visual.node.refs, (r) => ({ label: str(r.label), url: str(r.url) })),
+        },
+        market: {
+          answer: market.answer,
+          verdict: market.verdict,
+          rows: planList(
+            market.node.rows,
+            (r) => ({ keyword: str(r.keyword), count: str(r.count), note: str(r.note) }),
+            MARKET_ROWS.length
+          ),
+          direction: str(market.node.direction),
+          season: planText(market.node.season),
+          images: Array.isArray(market.node.images) ? market.node.images : [],
+        },
+        solution: {
+          answer: solution.answer,
+          verdict: solution.verdict,
+          material: str(solution.node.material),
+          known: str(solution.node.known),
+          ours: str(solution.node.ours),
+          comboKeyword: str(solution.node.comboKeyword),
+          comboCount: str(solution.node.comboCount),
+          proof: planText(solution.node.proof),
+        },
+        rivals: {
+          answer: rivals.answer,
+          verdict: rivals.verdict,
+          table: planList(
+            rivals.node.table,
+            (r) => {
+              const out = {};
+              RIVAL_FIELDS.forEach((f) => (out[f.key] = str(r[f.key])));
+              return out;
+            },
+            4
+          ),
+          axis: str(rivals.node.axis),
+          images: Array.isArray(rivals.node.images) ? rivals.node.images : [],
+        },
+        mark: {
+          answer: mark.answer,
+          verdict: mark.verdict,
+          niceClass: str(mark.node.niceClass),
+          candidates: planList(
+            mark.node.candidates,
+            (c) => ({ name: str(c.name), result: str(c.result) }),
+            3
+          ),
+          variants: planText(mark.node.variants),
+          checks: checks(mark.node, MARK_CHECKS),
+          images: Array.isArray(mark.node.images) ? mark.node.images : [],
+        },
+        ad: {
+          answer: ad.answer,
+          verdict: ad.verdict,
+          plans: planList(
+            ad.node.plans,
+            (a) => {
+              const out = {};
+              AD_FIELDS.forEach((f) => (out[f.key] = str(a[f.key])));
+              return out;
+            },
+            3
+          ),
+        },
+      },
+    };
+  }
+
+  /* "steps.market.rows" 처럼 점으로 이어진 길을 따라가 값을 바꾼다. */
+  function setPlan(ideaId, path, patch) {
+    const idea = state.ideas.find((i) => i.id === ideaId);
+    if (!idea) return;
+    if (!idea.plan) idea.plan = normalizePlan(null);
+    const keys = String(path).split(".");
+    let node = idea.plan;
+    for (let i = 0; i < keys.length - 1; i += 1) {
+      if (!node[keys[i]] || typeof node[keys[i]] !== "object") node[keys[i]] = {};
+      node = node[keys[i]];
+    }
+    const last = keys[keys.length - 1];
+    if (Array.isArray(patch) || patch === null || typeof patch !== "object") node[last] = patch;
+    else node[last] = Object.assign({}, node[last], patch);
+    idea.updatedAt = nowISO();
+    save();
+  }
+
+  function getPlan(ideaId) {
+    const idea = state.ideas.find((i) => i.id === ideaId);
+    return idea ? idea.plan : null;
+  }
+
+  /* 몇 단계나 답이 나왔는지. 한 줄 답변이 있으면 답한 것으로 센다 —
+     세부 칸은 근거이지 답이 아니다. */
+  function planFilled(idea) {
+    const plan = (idea || {}).plan;
+    if (!plan) return 0;
+    return PLAN_STEPS.filter((step) => ((plan.steps[step.key] || {}).answer || {}).text).length;
+  }
+
   /* 지금 어딘가에서 쓰이고 있는 이미지 열쇠 전부.
      기록에서 빠진 이미지 파일을 정리할 때 쓴다. */
   function usedImageIds() {
@@ -336,6 +499,12 @@ const Store = (() => {
     };
     collect(state.ideas);
     collect(state.competitors);
+    (state.ideas || []).forEach((idea) => {
+      const steps = ((idea.plan || {}).steps) || {};
+      collect([{ images: (steps.market || {}).images }]);
+      collect([{ images: (steps.rivals || {}).images }]);
+      collect([{ images: (steps.mark || {}).images }]);
+    });
     /* 컨셉보드에 붙인 사진도 빠뜨리면 안 된다. 여기 빠지면 '쓰이지 않는 사진'
        으로 보고 지워 버린다. */
     (state.products || []).forEach((product) => {
@@ -827,6 +996,9 @@ const Store = (() => {
     productProgress,
     overallProgress,
     competitorsFor,
+    setPlan,
+    getPlan,
+    planFilled,
     usedImageIds,
     snapshot,
     isEmpty,

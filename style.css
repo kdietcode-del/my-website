@@ -1569,3 +1569,181 @@ body.is-locked #settings-btn { display: none; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* ---------- 아이디어 기획서 7단계 ---------- */
+
+.psheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+}
+
+.psheet__head { padding-bottom: 20px; border-bottom: 2px solid var(--line); margin-bottom: 20px; }
+.psheet__eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.psheet__name { font-size: 1.75rem; margin: 4px 0 16px; }
+.psheet__star { font-size: 0.8125rem; font-weight: 700; color: var(--text-2); margin-bottom: 4px; }
+.psheet__note { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+.psheet__count { font-size: 0.8125rem; color: var(--text-2); align-self: center; white-space: nowrap; }
+
+/* 표 — 제출 양식과 조사 표가 같은 모양을 쓴다 */
+.ptable { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.ptable th, .ptable td {
+  border: 1px solid var(--grid);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+.ptable thead th {
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.ptable tbody th, .ptable tfoot th {
+  background: var(--surface-2);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  white-space: nowrap;
+  width: 1%;
+}
+.ptable .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ptable tfoot td { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ptable .input { min-width: 0; max-width: none; flex: none; width: 100%; padding: 5px 8px; font-size: 0.8125rem; }
+.ptable .input.num { text-align: right; }
+.ptable--rivals { table-layout: fixed; }
+
+/* 제출 양식 — A4 한 장으로 읽히는 부분 */
+.psum { margin-bottom: 28px; }
+.psum__ask { color: var(--muted); font-size: 0.8125rem; white-space: nowrap; }
+.psum__jump { color: var(--text); text-decoration: none; display: block; }
+.psum__jump:hover { color: var(--accent); text-decoration: underline; }
+.psum__v { width: 1%; white-space: nowrap; }
+
+.pnum {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* 판정 */
+.pv {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  border: 1px solid var(--grid);
+  color: var(--muted);
+}
+.pv--good { background: var(--good-bg, #e8f5ec); border-color: var(--good, #2e7d4f); color: var(--good, #2e7d4f); }
+.pv--warn { background: var(--warn-bg, #fdf3e3); border-color: var(--warning, #a06a12); color: var(--warning, #a06a12); }
+.pv--critical { background: var(--crit-bg, #fdeceb); border-color: var(--critical, #b3261e); color: var(--critical, #b3261e); }
+
+/* 단계 */
+.psteps { display: flex; flex-direction: column; gap: 16px; }
+.pstep {
+  border: 1px solid var(--grid);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  scroll-margin-top: 90px;
+}
+.pstep:target { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.12); }
+.pstep__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pstep__title { font-size: 1rem; }
+.pstep__ask { font-size: 0.8125rem; color: var(--text-2); margin-top: 2px; }
+.pstep__need { font-size: 0.75rem; color: var(--muted); margin: 8px 0 14px; }
+.pstep__tools .select { font-size: 0.8125rem; padding: 4px 8px; }
+.pstep__body { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+
+.pfield { display: flex; flex-direction: column; gap: 6px; }
+.pfield__label { font-size: 0.8125rem; font-weight: 650; color: var(--text-2); }
+.pfield__hint { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+.pfield .input { min-width: 0; max-width: none; flex: none; }
+
+/* 눌러서 고치는 글 */
+.ptext {
+  min-height: 1.6em;
+  line-height: 1.6;
+  font-size: 0.9375rem;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--grid);
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ptext:hover { background: var(--surface-2); }
+.ptext:focus { border-color: var(--accent); background: var(--surface); }
+.ptext:empty::before { content: attr(data-placeholder); color: var(--muted); }
+.ptext--lead { font-size: 1.0625rem; font-weight: 600; }
+
+/* 체크 줄 */
+.pchecks { display: flex; flex-direction: column; gap: 6px; }
+.pcheck { display: flex; gap: 8px; align-items: flex-start; font-size: 0.875rem; cursor: pointer; }
+.pcheck input { margin-top: 3px; flex: none; }
+.pcheck em { display: block; font-style: normal; font-size: 0.75rem; color: var(--muted); }
+
+/* 줄 추가형 칸 */
+.prows { display: flex; flex-direction: column; gap: 6px; align-items: start; }
+.prow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 6px; width: 100%; }
+.prow .input { min-width: 0; max-width: none; flex: none; }
+
+.pcombo { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 8px; }
+.pcombo .input { min-width: 0; max-width: none; flex: none; }
+.pcombo .input.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 광고 3안 */
+.pads { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.pad {
+  border: 1px solid var(--grid);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--surface-2);
+}
+.pad__title { font-size: 0.8125rem; color: var(--accent); margin-bottom: 8px; }
+.pad__label { font-size: 0.75rem; color: var(--muted); margin: 8px 0 3px; }
+.pad .input { min-width: 0; max-width: none; flex: none; width: 100%; font-size: 0.8125rem; padding: 5px 8px; }
+
+@media (max-width: 900px) {
+  .psheet { padding: 18px; }
+  .pstep { padding: 14px; }
+  .ptable, .ptable thead, .ptable tbody, .ptable tfoot, .ptable tr, .ptable th, .ptable td { display: block; }
+  .ptable thead { display: none; }
+  .ptable tbody th, .ptable tfoot th { width: auto; border-bottom: none; }
+  .ptable tr { margin-bottom: 10px; border: 1px solid var(--grid); border-radius: var(--radius-sm); overflow: hidden; }
+  .ptable th, .ptable td { border: none; border-bottom: 1px solid var(--grid); }
+  .ptable tr > *:last-child { border-bottom: none; }
+  .psum__ask { white-space: normal; }
+  .prow { grid-template-columns: 1fr; }
+  .pcombo { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .psheet { border: none; padding: 0; }
+  .pstep { break-inside: avoid; }
+  .ptext:hover, .ptext:focus { background: none; }
+  .psheet__count { display: none !important; }
+}

@@ -304,7 +304,9 @@ const Ideas = (() => {
         : "") +
       (tags ? '<div class="chip-row">' + tags + "</div>" : "") +
       '<footer class="card__foot">' +
-      '<button type="button" class="btn btn--sm btn--primary" data-act="promote">런칭 준비로 →</button>' +
+      '<button type="button" class="btn btn--sm btn--primary" data-act="plan">기획서 ' +
+      Store.planFilled(idea) + " / " + PLAN_STEPS.length + "</button>" +
+      '<button type="button" class="btn btn--sm btn--ghost" data-act="promote">런칭 준비로 →</button>' +
       '<button type="button" class="btn btn--sm btn--ghost" data-act="edit">수정</button>' +
       '<button type="button" class="btn btn--sm btn--ghost" data-act="remove">삭제</button>' +
       "</footer>" +
@@ -312,7 +314,26 @@ const Ideas = (() => {
     );
   }
 
+  function openPlan(id) {
+    Plan.setActive(id);
+    App.render();
+  }
+
   function render(root) {
+    /* 기획서가 열려 있으면 목록 대신 그것을 그린다 */
+    const openId = Plan.getActive();
+    if (openId) {
+      const idea = Store.state.ideas.find((i) => i.id === openId);
+      if (idea) {
+        Plan.render(root, idea, () => {
+          Plan.setActive(null);
+          App.render();
+        });
+        return;
+      }
+      Plan.setActive(null);
+    }
+
     const list = visibleIdeas();
     const total = Store.state.ideas.length;
     const ownCount = Store.state.ideas.filter((i) => i.kind !== "reference").length;
@@ -487,12 +508,20 @@ const Ideas = (() => {
 
     root.querySelectorAll(".idea-card").forEach((card) => {
       const id = card.dataset.id;
+
+      /* 카드 본문 아무 데나 눌러도 기획서가 열린다. 단추 · 링크 · 손잡이 ·
+         썸네일은 각자 할 일이 있으니 건드리지 않는다. */
+      card.addEventListener("click", (event) => {
+        if (event.target.closest("button, a, .img-thumb, .thumb")) return;
+        openPlan(id);
+      });
       card.querySelectorAll("[data-act]").forEach((btn) => {
         btn.addEventListener("click", () => {
           const action = btn.dataset.act;
           if (action === "edit") openEdit(id);
           if (action === "remove") remove(id);
           if (action === "promote") promote(id);
+          if (action === "plan") openPlan(id);
         });
       });
     });

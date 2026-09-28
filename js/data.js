@@ -191,3 +191,155 @@ const SEED = {
   products: [],
   competitors: [],
 };
+
+/* 신제품·브랜드 기획 프로세스 v1.0 의 일곱 단계.
+
+   앞에서부터 순서대로 답하면 기획서가 된다. 순서에 뜻이 있다 — 페인포인트가
+   안 서면 비포애프터가 안 나오고, 비포애프터가 안 보이면 광고를 못 태운다.
+   그래서 1·2 가 앞에 있고, 막히면 거기로 돌아간다. */
+const PLAN_STEPS = [
+  {
+    key: "pain",
+    n: 1,
+    title: "페인포인트",
+    ask: "누가 무엇 때문에 괴로운가?",
+    need: "타겟을 특정한 한 문장",
+    short: "무엇인가?",
+  },
+  {
+    key: "visual",
+    n: 2,
+    title: "비포애프터",
+    ask: "달라진 게 눈에 보이는가?",
+    need: "비포 장면 · 애프터 장면",
+    short: "보여줄 수 있니?",
+  },
+  {
+    key: "market",
+    n: 3,
+    title: "시장 크기",
+    ask: "사려는 사람이 충분히 많은가?",
+    need: "네이버 검색량과 추세",
+    short: "충분히 크니?",
+  },
+  {
+    key: "solution",
+    n: 4,
+    title: "해결방안",
+    ask: "문제 해결방안이 뾰족한가?",
+    need: "알려진 원료 + 우리의 처리 + 근거 자료",
+    short: "차별화되니?",
+  },
+  {
+    key: "rivals",
+    n: 5,
+    title: "경쟁제품",
+    ask: "누가 이미 하고 있는가?",
+    need: "경쟁사 3개 + 차별화 축 1개",
+    short: "이미 시장에 있니?",
+  },
+  {
+    key: "mark",
+    n: 6,
+    title: "상표",
+    ask: "이 이름을 쓸 수 있는가?",
+    need: "키프리스 검색 결과 · 후보 3개",
+    short: "상표 가능하니?",
+  },
+  {
+    key: "ad",
+    n: 7,
+    title: "광고 소재",
+    ask: "15초 영상이 그려지는가?",
+    need: "서로 다른 3안",
+    short: "어떻게 후킹해서 팔거니?",
+  },
+];
+
+/* 대표가 항목별로 내리는 판정 */
+const PLAN_VERDICTS = [
+  { key: "", label: "판정 전", tone: "none" },
+  { key: "o", label: "O 통과", tone: "good" },
+  { key: "tri", label: "▲ 보완", tone: "warn" },
+  { key: "x", label: "X 탈락", tone: "critical" },
+];
+
+/* 2단계 — 비포애프터를 보여줄 수 있는 정도 */
+const VISUAL_GRADES = [
+  { key: "", label: "미정" },
+  { key: "direct", label: "직접 시각화 — 문제 부위를 그대로 촬영" },
+  { key: "indirect", label: "간접 시각화 — 결과 행동을 대신 촬영" },
+  { key: "none", label: "시각화 불가" },
+];
+
+/* 3단계 — 3년 추세의 방향 */
+const TREND_DIRECTIONS = [
+  { key: "", label: "미정" },
+  { key: "up", label: "우상향 — 가산점" },
+  { key: "flat", label: "평탄 — 무방" },
+  { key: "down", label: "하락 — 고민" },
+];
+
+/* 5단계 — 골라야 할 차별화 축 하나 */
+const RIVAL_AXES = [
+  { key: "", label: "미정" },
+  { key: "form", label: "제형 — 먹기 편함이 재구매를 가른다" },
+  { key: "dose", label: "농도 — 업계 최고 함량" },
+  { key: "mix", label: "원료 조합 — 새 이름을 만든다" },
+  { key: "target", label: "타겟 세분화 — 특정 집단에만 조준" },
+  { key: "price", label: "가격대 — 위나 아래로. 중간이 가장 위험" },
+];
+
+/* 6단계 — 니스분류. 같은 이름이라도 분류가 다르면 공존한다. */
+const NICE_CLASSES = [
+  { key: "", label: "미정" },
+  { key: "3", label: "제3류 — 화장품" },
+  { key: "5", label: "제5류 — 건강기능식품 · 영양보충제" },
+  { key: "29", label: "제29류 — 가공식품" },
+  { key: "30", label: "제30류 — 가공식품" },
+  { key: "32", label: "제32류 — 음료 · 액상" },
+];
+
+/* 1단계 — 좋은 페인포인트의 3요건. 셋 다 되어야 O 다. */
+const PAIN_CHECKS = [
+  { key: "aware", label: "이미 자각하고 있다", hint: "설명 없이도 본인 문제를 안다" },
+  { key: "spend", label: "이미 돈을 쓰고 있다", hint: "병원 · 시술 · 다른 제품 지출 이력" },
+  { key: "search", label: "이미 검색해봤다", hint: "3단계에서 숫자로 확인한다" },
+];
+
+/* 6단계 — 상표가 비어 있어도 이게 막히면 운영이 불편해진다 */
+const MARK_CHECKS = [
+  { key: "naver", label: "네이버에 엉뚱한 게 나오지 않는지" },
+  { key: "store", label: "스마트스토어 · 쿠팡 상품명 중복" },
+  { key: "handle", label: "인스타그램 · 유튜브 핸들" },
+];
+
+/* 6단계 — 전체 이름만 검색하면 반드시 놓친다. 분해해서 본다. */
+const MARK_VARIANTS = [
+  { key: "full", label: "전체명", hint: "레몬타치온" },
+  { key: "head", label: "앞마디", hint: "레몬타" },
+  { key: "tail", label: "뒷마디", hint: "타치온" },
+  { key: "mid", label: "중간 절단", hint: "몬타치온" },
+  { key: "similar", label: "유사 발음", hint: "레모타치온, 레몬키오" },
+];
+
+/* 3단계 — 세부키워드가 더 중요하다. '탈모' 는 정보를 찾는 중이고
+   '탈모에 좋은 음식' 은 이미 돈 쓸 준비가 된 사람이다. */
+const MARKET_ROWS = ["대표", "세부 1", "세부 2", "세부 3", "세부 4", "세부 5"];
+
+/* 5단계 — 경쟁사 비교표의 줄 */
+const RIVAL_FIELDS = [
+  { key: "name", label: "브랜드 · 제품명" },
+  { key: "price", label: "가격 · 용량" },
+  { key: "form", label: "제형" },
+  { key: "pitch", label: "핵심 소구 한 줄" },
+  { key: "reviews", label: "리뷰수", oursNA: true },
+  { key: "adDays", label: "광고 집행 기간", oursNA: true },
+];
+
+/* 7단계 — 각 안은 이 네 칸이 전부다. 스토리보드는 필요 없다. */
+const AD_FIELDS = [
+  { key: "hook", label: "3초 후킹", hint: "첫 대사 · 장면" },
+  { key: "ba", label: "비포애프터 표현", hint: "무엇을 어떻게 보여주는가" },
+  { key: "who", label: "화자와 상황", hint: "누가, 어떤 상황에서" },
+];
