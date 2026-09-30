@@ -140,7 +140,6 @@ const Plan = (() => {
   }
 
   function marketBody(s) {
-    const total = s.rows.reduce((sum, r) => sum + (Number(String(r.count).replace(/[^0-9]/g, "")) || 0), 0);
     const rows = s.rows
       .map(
         (row, i) =>
@@ -154,9 +153,7 @@ const Plan = (() => {
       field(
         "키워드와 월간 검색수",
         '<table class="ptable"><thead><tr><th>구분</th><th>키워드</th><th class="num">월간 검색수</th><th>비고</th></tr></thead>' +
-          "<tbody>" + rows + "</tbody>" +
-          '<tfoot><tr><th scope="row">합계</th><td></td><td class="num">' +
-          total.toLocaleString("ko-KR") + '</td><td></td></tr></tfoot></table>',
+          "<tbody>" + rows + "</tbody></table>",
         "세부키워드가 더 중요합니다. '탈모' 는 정보를 찾는 중이고, '탈모에 좋은 음식' 은 이미 돈 쓸 준비가 된 사람입니다. PC와 모바일을 합산해 적으세요"
       ) +
       field("추세 방향", pick("steps.market.direction", s.direction, TREND_DIRECTIONS, "추세 방향"),
@@ -391,8 +388,6 @@ const Plan = (() => {
       const target = event.target;
       if (target.dataset && target.dataset.line) {
         Store.setPlan(idea.id, target.dataset.line, target.value.trim());
-        /* 검색량을 고치면 합계가 달라진다 */
-        if (target.dataset.line.indexOf("steps.market.rows") === 0) App.render();
         return;
       }
       if (target.dataset && target.dataset.pick) {
