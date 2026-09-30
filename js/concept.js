@@ -408,7 +408,7 @@ const Concept = (() => {
     if (!products.length) {
       return (
         '<div class="empty"><p class="empty__title">아직 진행 중인 제품이 없습니다.</p>' +
-        "<p>제품 런칭 상황보드에서 제품을 먼저 추가하세요. 여기에 자동으로 나타납니다.</p></div>"
+        "<p>오른쪽 위 '컨셉보드 추가' 로 첫 제품을 만들어 보세요. 런칭 상황보드에도 같이 생깁니다.</p></div>"
       );
     }
     const cards = products
@@ -439,6 +439,43 @@ const Concept = (() => {
       })
       .join("");
     return '<div class="card-grid">' + cards + "</div>";
+  }
+
+  /* 컨셉보드를 여기서 바로 만든다. 예전에는 런칭 상황보드에서 제품을 먼저
+     만들어야 했는데, 컨셉을 먼저 잡고 런칭을 나중에 거는 쪽이 자연스럽다.
+
+     같은 제품 기록이라, 여기서 만들면 런칭 상황보드에도 함께 생긴다. */
+  function openCreate() {
+    UI.openForm({
+      title: "제품 컨셉보드 추가",
+      fields: [
+        { name: "name", label: "제품명", type: "text", required: true, span: 2 },
+        {
+          name: "efficacyType",
+          label: "피부효능",
+          type: "select",
+          options: [{ value: "", label: "선택 안 함" }].concat(
+            EFFICACIES.map((e) => ({ value: e.key, label: e.label }))
+          ),
+        },
+        {
+          name: "category",
+          label: "카테고리",
+          type: "select",
+          options: [{ value: "", label: "선택 안 함" }].concat(
+            CATEGORIES.map((x) => ({ value: x.key, label: x.label }))
+          ),
+        },
+      ],
+      values: { efficacyType: "", category: "" },
+      submitLabel: "컨셉보드 만들기",
+      onSubmit: (data) => {
+        const product = Store.addProduct(data);
+        UI.toast("컨셉보드를 만들었습니다. 런칭 상황보드에도 같이 생겼습니다.");
+        setActive(product.id);
+        App.render();
+      },
+    });
   }
 
   /* ---------- 렌더 ---------- */
@@ -478,10 +515,14 @@ const Concept = (() => {
       '<div class="view__head">' +
       "<div>" +
       "<h2>제품 컨셉보드</h2>" +
-      '<p class="view__sub">진행 중인 제품을 한 장으로 정리합니다. 제품을 누르면 가로로 펼쳐진 보드가 열리고, 그 자리에서 바로 고칠 수 있습니다.</p>' +
+      '<p class="view__sub">제품을 한 장으로 정리합니다. 제품을 누르면 가로로 펼쳐진 보드가 열리고, 그 자리에서 바로 고칠 수 있습니다.</p>' +
       "</div>" +
+      '<button type="button" class="btn btn--primary" data-act="create">+ 컨셉보드 추가</button>' +
       "</div>" +
       listHtml();
+
+    const createBtn = root.querySelector('[data-act="create"]');
+    if (createBtn) createBtn.addEventListener("click", openCreate);
 
     root.querySelectorAll(".product-card").forEach((card) => {
       const open = () => {

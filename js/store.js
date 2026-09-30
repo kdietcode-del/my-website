@@ -928,6 +928,10 @@ const Store = (() => {
       data,
       { stages: makeStages(0, 0) }
     );
+    /* 컨셉 칸과 할 일은 여기서 만들어 둔다. 정리(normalize) 는 불러올 때만
+       도는데, 방금 만든 제품의 컨셉보드를 바로 열면 그 전이라 빈손이다. */
+    product.concept = normalizeConcept(product.concept);
+    product.todos = cleanTodos(product.todos);
     state.products.unshift(product);
     save();
     return product;
