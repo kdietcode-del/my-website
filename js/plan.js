@@ -283,7 +283,8 @@ const Plan = (() => {
         '<tr><th scope="row"><span class="pnum">' + step.n + "</span>" +
         UI.escapeHtml(step.title) + "</th>" +
         '<td class="psum__ask">' + UI.escapeHtml(step.short) + "</td>" +
-        '<td><a class="psum__jump" href="#pstep-' + step.key + '">' +
+        '<td><a class="psum__jump" href="#pstep-' + step.key + '" data-summary="' +
+        step.key + '">' +
         (answered ? UI.escapeHtml(answered) : '<span class="muted">아직 답이 없습니다</span>') +
         "</a></td></tr>"
       );
@@ -363,6 +364,28 @@ const Plan = (() => {
     Images.hydrate(root);
   }
 
+  /* 아래 단계에 적은 한 줄 답변이 위의 제출 양식에 그대로 올라와야 한다.
+     화면을 통째로 다시 그리면 글 쓰던 자리를 잃으니, 그 칸만 갈아 끼운다. */
+  function syncSummary(root, idea, path) {
+    const match = /^steps\.([a-zA-Z]+)\.answer$/.exec(path || "");
+    if (!match) return;
+
+    const cell = root.querySelector('[data-summary="' + match[1] + '"]');
+    if (cell) {
+      const plan = Store.getPlan(idea.id) || { steps: {} };
+      const text = (((plan.steps[match[1]] || {}).answer || {}).text || "").trim();
+      cell.innerHTML = text
+        ? UI.escapeHtml(text)
+        : '<span class="muted">아직 답이 없습니다</span>';
+    }
+
+    const count = root.querySelector(".psheet__count");
+    if (count) {
+      const fresh = Store.state.ideas.find((i) => i.id === idea.id);
+      count.textContent = "답한 항목 " + Store.planFilled(fresh) + " / " + PLAN_STEPS.length;
+    }
+  }
+
   /* ---------- 묶기 ---------- */
 
   function bind(root, idea, onBack) {
@@ -380,6 +403,17 @@ const Plan = (() => {
         Store.setPlan(idea.id, node.dataset.path, {
           text: node.innerText.replace(/ /g, " ").trim(),
         });
+        syncSummary(root, idea, node.dataset.path);
+      });
+
+      /* 다 적고 위를 올려다볼 때 이미 바뀌어 있어야 한다. 칸을 빠져나오기
+         전에도 따라오도록 글자가 바뀔 때마다 맞춘다. */
+      node.addEventListener("input", () => {
+        if (!/\.answer$/.test(node.dataset.path || "")) return;
+        Store.setPlan(idea.id, node.dataset.path, {
+          text: node.innerText.replace(/ /g, " ").trim(),
+        });
+        syncSummary(root, idea, node.dataset.path);
       });
     });
 

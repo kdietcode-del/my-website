@@ -863,7 +863,15 @@ const Store = (() => {
   /* ---------- 아이디어 ---------- */
 
   function addIdea(data) {
-    const idea = Object.assign({ id: uid(), createdAt: nowISO(), tags: [], refs: [] }, data);
+    const idea = Object.assign(
+      { id: uid(), createdAt: nowISO(), tags: [], refs: [], images: [] },
+      data
+    );
+    /* 기획서 칸을 여기서 만들어 둔다. 정리(normalize) 는 불러올 때만
+       도는데, 방금 만든 아이디어의 기획서를 바로 열면 그 전이라 빈손이다. */
+    idea.plan = normalizePlan(idea.plan);
+    seedPlanFromIdea(idea);
+    moveMemoToDevelop(idea);
     state.ideas.unshift(idea);
     save();
     return idea;
