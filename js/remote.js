@@ -165,10 +165,24 @@ const Remote = (() => {
     });
   }
 
-  function getImage(id) {
+  /* 서버는 바이트만 보관한다. 그게 그림인지 영상인지는 받는 쪽에서 정해 준다 —
+     기록에 적어 둔 종류를 그대로 씌워야 <video> 가 재생할 수 있다. */
+  function getMedia(id, type) {
     return call("/image/" + encodeURIComponent(id), { raw: true }).then(
-      (bytes) => new Blob([bytes], { type: "image/jpeg" })
+      (bytes) => new Blob([bytes], { type: type || "image/jpeg" })
     );
+  }
+
+  function putMedia(id, blob) {
+    return call("/image/" + encodeURIComponent(id), {
+      method: "PUT",
+      headers: { "Content-Type": blob.type || "application/octet-stream" },
+      body: blob,
+    });
+  }
+
+  function getImage(id) {
+    return getMedia(id, "image/jpeg");
   }
 
   function putImage(id, blob) {
@@ -197,6 +211,8 @@ const Remote = (() => {
     putState,
     getImage,
     putImage,
+    getMedia,
+    putMedia,
     deleteImage,
   };
 })();

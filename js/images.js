@@ -171,6 +171,39 @@ const Images = (() => {
     return tx("readwrite", (store) => store.put(blob, id));
   }
 
+  /* 영상처럼 줄일 수 없는 파일은 그대로 담는다. 브라우저에서 영상을 다시
+     굽는 것은 오래 걸리고 화질도 망가진다. 대신 너무 큰 것만 막는다.
+
+     꺼내 쓸 때 종류(video/mp4 등) 를 알아야 재생이 되므로, 부른 쪽에서 그
+     값을 기록해 둔다. */
+  const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
+
+  function mediaLimitText() {
+    return Math.round(MAX_MEDIA_BYTES / 1048576) + "MB";
+  }
+
+  function addMedia(file) {
+    if (!file) return Promise.reject(new Error("파일이 없습니다."));
+    if (file.size > MAX_MEDIA_BYTES) {
+      return Promise.reject(
+        new Error("파일이 너무 큽니다. " + mediaLimitText() + " 이하만 올릴 수 있습니다.")
+      );
+    }
+    const id = newId();
+    const type = file.type || "video/mp4";
+    return tx("readwrite", (store) => store.put(file, id))
+      .then(() => {
+        if (typeof Remote !== "undefined" && Remote.signedIn()) {
+          return Remote.putMedia(id, file).catch(() => {
+            if (typeof UI !== "undefined" && UI.toast) {
+              UI.toast("영상을 서버에 올리지 못했습니다. 다른 기기에서는 안 보일 수 있습니다.", "warn");
+            }
+          });
+        }
+      })
+      .then(() => ({ id, size: file.size, type }));
+  }
+
   function get(id) {
     return tx("readonly", (store) => store.get(id));
   }
@@ -228,18 +261,20 @@ const Images = (() => {
 
   /* 이 브라우저에 없으면 서버에서 받아 와 담아 둔다. 다른 사람이 올린 사진을
      내 화면에서도 보려면 이 경로가 필요하다. */
-  function fetchFromServer(id) {
+  function fetchFromServer(id, type) {
     if (typeof Remote === "undefined" || !Remote.signedIn()) return Promise.resolve("");
-    return Remote.getImage(id)
+    return Remote.getMedia(id, type || "image/jpeg")
       .then((blob) => putRaw(id, blob).then(() => hold(id, blob)))
       .catch(() => "");
   }
 
-  function objectUrl(id) {
+  /* type 은 서버에서 받아 올 때만 쓴다. 서버는 바이트만 돌려주므로, 영상인지
+     그림인지를 여기서 일러 줘야 <video> 가 재생할 수 있다. */
+  function objectUrl(id, type) {
     if (urlCache.has(id)) return Promise.resolve(urlCache.get(id));
     return get(id)
-      .then((blob) => (blob ? hold(id, blob) : fetchFromServer(id)))
-      .catch(() => fetchFromServer(id));
+      .then((blob) => (blob ? hold(id, blob) : fetchFromServer(id, type)))
+      .catch(() => fetchFromServer(id, type));
   }
 
   function hydrate(scope) {
@@ -254,6 +289,16 @@ const Images = (() => {
         } else {
           node.remove();
         }
+      });
+    });
+
+    /* 영상도 같은 방식으로 채운다. 종류를 함께 넘기지 않으면, 서버에서 받아
+       온 경우 브라우저가 재생할 수 있는 파일인지 알지 못한다. */
+    root.querySelectorAll("video[data-media-id]:not([data-img-done])").forEach((node) => {
+      node.dataset.imgDone = "1";
+      objectUrl(node.dataset.mediaId, node.dataset.mediaType || "video/mp4").then((url) => {
+        if (url) node.src = url;
+        else node.classList.add("is-broken");
       });
     });
   }
@@ -299,6 +344,8 @@ const Images = (() => {
     isAvailable,
     whyUnavailable,
     addFile,
+    addMedia,
+    mediaLimitText,
     get,
     remove,
     listAll,

@@ -19,6 +19,7 @@ const Store = (() => {
     products: [],
     competitors: [],
     todos: [],
+    references: [],
     seeded: false,
     cleanupVersion: 0,
     seedVersion: 0,
@@ -47,6 +48,7 @@ const Store = (() => {
       products: state.products,
       competitors: state.competitors,
       todos: state.todos,
+      references: state.references,
     };
   }
 
@@ -54,7 +56,8 @@ const Store = (() => {
     return (
       !(state.ideas || []).length &&
       !(state.products || []).length &&
-      !(state.competitors || []).length
+      !(state.competitors || []).length &&
+      !(state.references || []).length
     );
   }
 
@@ -64,6 +67,7 @@ const Store = (() => {
     state.products = (data && data.products) || [];
     state.competitors = (data && data.competitors) || [];
     state.todos = (data && data.todos) || [];
+    state.references = (data && data.references) || [];
     normalize();
     saveLocal();
   }
@@ -264,6 +268,7 @@ const Store = (() => {
     );
 
     normalizeTodos();
+    normalizeReferences();
     mergeConceptRivals();
 
     if (seededSome) {
@@ -629,6 +634,117 @@ const Store = (() => {
     save();
   }
 
+  /* ---------- 타사 레퍼런스 ----------
+
+     핀터레스트처럼 보고 모으는 판이다. 한 칸에 들어가는 것은 셋 중 하나다.
+
+       image  그림 한 장          (붙여넣기 · 파일 · 주소)
+       video  영상 파일           (poster 에 첫 장면을 담아 둬야 격자에 보인다)
+       link   남의 페이지 주소    (image 에 그 페이지 대표 그림이 들어온다)
+
+     어느 쪽이든 격자에 보이는 썸네일은 항상 image 한 군데다. 종류마다 다른
+     자리를 보게 하면 화면을 그릴 때마다 종류를 따져야 한다. */
+
+  function refPic(value) {
+    if (!value) return null;
+    const id = String(value.id || "");
+    const url = String(value.url || "");
+    if (!id && !url) return null;
+    return { id, url };
+  }
+
+  function normalizeReferences() {
+    state.references = (state.references || []).map((r) => {
+      const item = Object.assign(
+        {
+          id: uid(),
+          kind: "image",
+          title: "",
+          note: "",
+          url: "",
+          siteName: "",
+          createdAt: nowISO(),
+        },
+        r
+      );
+      if (item.kind !== "image" && item.kind !== "video" && item.kind !== "link") {
+        item.kind = "image";
+      }
+      item.image = refPic(item.image);
+      /* 영상 알맹이는 영상 칸에만 둔다. 종류를 바꿔 놓고도 남아 있으면
+         20MB 짜리 파일이 아무도 모르게 저장소를 차지한다. */
+      item.media =
+        item.kind === "video" && item.media && item.media.id
+          ? {
+              id: String(item.media.id),
+              type: String(item.media.type || "video/mp4"),
+              name: String(item.media.name || ""),
+            }
+          : null;
+      return item;
+    });
+  }
+
+  function addReference(data) {
+    const item = Object.assign(
+      {
+        id: uid(),
+        createdAt: nowISO(),
+        kind: "image",
+        title: "",
+        note: "",
+        url: "",
+        siteName: "",
+        image: null,
+        media: null,
+      },
+      data
+    );
+    state.references.unshift(item);
+    save();
+    return item;
+  }
+
+  function updateReference(id, patch) {
+    const item = state.references.find((r) => r.id === id);
+    if (!item) return null;
+    Object.assign(item, patch);
+    save();
+    return item;
+  }
+
+  function getReference(id) {
+    return state.references.find((r) => r.id === id) || null;
+  }
+
+  /* 지울 때 영상은 서버에서도 치운다. 안 쓰는 그림을 훑어서 지우는 청소는
+     이 브라우저 안에서만 도므로, 20MB 짜리가 서버에 영영 남는다. */
+  function removeReference(id) {
+    const item = getReference(id);
+    if (item && item.media && item.media.id && typeof Remote !== "undefined" && Remote.signedIn()) {
+      Remote.deleteImage(item.media.id);
+    }
+    state.references = state.references.filter((r) => r.id !== id);
+    save();
+  }
+
+  /* 끌어다 놓은 순서를 그대로 받는다. 목록에 없던 id 는 무시하고, 빠진 것은
+     뒤에 붙여 잃어버리지 않는다. */
+  function setReferenceOrder(orderedIds) {
+    const byId = new Map(state.references.map((r) => [r.id, r]));
+    const next = [];
+    orderedIds.forEach((id) => {
+      const item = byId.get(id);
+      if (item) {
+        next.push(item);
+        byId.delete(id);
+      }
+    });
+    byId.forEach((item) => next.push(item));
+    state.references = next;
+    save();
+  }
+
   /* ---------- 지금 해야할 일 ----------
 
      어느 아이디어에도 안 붙는 일들이 있다. 제조사에 전화하기, 샘플 받아
@@ -709,6 +825,12 @@ const Store = (() => {
       const concept = product.concept || {};
       collect([{ images: concept.images }]);
       collect([{ images: (concept.ads || {}).images }]);
+    });
+    /* 타사 레퍼런스의 썸네일과 영상 알맹이. 여기 빠지면 '안 쓰는 파일' 로
+       보고 지워 버려서, 보드에 빈 칸만 남는다. */
+    (state.references || []).forEach((item) => {
+      if (item.image && item.image.id && !item.image.url) ids.push(item.image.id);
+      if (item.media && item.media.id) ids.push(item.media.id);
     });
     return ids;
   }
@@ -1166,6 +1288,7 @@ const Store = (() => {
           products: state.products,
           competitors: state.competitors,
           todos: state.todos,
+          references: state.references,
           images,
         },
         null,
@@ -1181,6 +1304,7 @@ const Store = (() => {
       state.ideas = parsed.ideas || [];
       state.products = parsed.products || [];
       state.competitors = parsed.competitors || [];
+      state.references = parsed.references || [];
       normalize();
       save();
     });
@@ -1220,6 +1344,11 @@ const Store = (() => {
     addCompetitor,
     updateCompetitor,
     removeCompetitor,
+    addReference,
+    updateReference,
+    getReference,
+    removeReference,
+    setReferenceOrder,
     stageProgress,
     productProgress,
     overallProgress,

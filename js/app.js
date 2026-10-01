@@ -31,6 +31,7 @@ const App = (() => {
     { key: "pipeline", label: "🚀 제품 런칭 상황보드", short: "🚀 런칭 상황", view: () => Pipeline },
     { key: "concept", label: "🎨 제품 컨셉보드", short: "🎨 컨셉 보드", view: () => Concept },
     { key: "ideas", label: "💡 신제품 아이디어", short: "💡 신제품 아이디어", view: () => Ideas },
+    { key: "refs", label: "🖼 타사 레퍼런스", short: "🖼 타사 레퍼런스", view: () => Refs },
   ];
 
   let activeTab = "pipeline";
@@ -41,6 +42,7 @@ const App = (() => {
     activeTab = tabKey;
     if (tabKey === "pipeline") Pipeline.setActive(payload || null);
     if (tabKey === "concept") Concept.setActive(payload || null);
+    if (tabKey === "refs") Refs.setActive(payload || null);
     /* 참고제품 보드는 이제 컨셉보드 안에 있다. 바깥에서 부르면
        그 제품의 컨셉보드로 보낸 뒤 참고보드를 편다. */
     if (tabKey === "competitors") {

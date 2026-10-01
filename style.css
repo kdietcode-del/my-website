@@ -2048,6 +2048,176 @@ body.is-locked #settings-btn { display: none; }
 }
 
 /* ============================================================
+   타사 레퍼런스 — 보고 모으는 판
+
+   칸마다 높이가 제각각으로 벽돌처럼 쌓인다. 그래서 격자(grid) 가 아니라
+   단(column) 으로 짠다 — 그림이 다 뜨기 전에는 높이를 알 수 없는데,
+   단은 브라우저가 알아서 채워 준다.
+   ============================================================ */
+
+.refgrid {
+  column-width: 250px;
+  column-gap: 14px;
+}
+
+.refcard {
+  position: relative;
+  break-inside: avoid;
+  margin: 0 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.refcard.is-dragging { opacity: 0.45; }
+.refcard.is-over { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+.refcard__open {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+  cursor: zoom-in;
+}
+.refcard__img { width: 100%; height: auto; display: block; }
+
+/* 종류 표시. 그림 위에 겹치므로 어두운 바탕을 깔아 글자를 지킨다. */
+.refcard__badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(11, 11, 11, 0.62);
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.refcard__cap {
+  padding: 8px 10px 10px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text-2);
+  /* 두 줄까지만. 긴 제목이 칸을 혼자 다 차지하면 판이 울퉁불퉁해진다. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 순서 손잡이는 평소엔 숨어 있다. 그림을 가리면 보러 온 보람이 없다. */
+.refcard .card__grip {
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  /* 그림 위에 겹치므로 바탕을 깔아야 ⠿ 가 보인다 */
+  background: var(--surface);
+}
+.refcard:hover .card__grip,
+.refcard .card__grip:focus-visible { opacity: 1; }
+
+/* 그림이 없는 칸 */
+.refblank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 150px;
+  padding: 20px 14px;
+  background: var(--surface-2);
+  color: var(--muted);
+  line-height: 1.4;
+}
+.refblank__mark { font-size: 1.5rem; }
+.refblank__say { font-size: 0.8125rem; text-align: center; word-break: break-all; }
+
+/* 추가 — 셋 중 고르기 */
+.refpicks { display: flex; flex-direction: column; gap: 10px; }
+.refpick {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: inherit;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.refpick:hover { border-color: var(--accent); background: var(--surface-2); }
+.refpick__mark { font-size: 1.5rem; line-height: 1; }
+.refpick__body { display: flex; flex-direction: column; gap: 3px; }
+.refpick__body strong { font-size: 0.9375rem; color: var(--text); }
+.refpick__body span { font-size: 0.8125rem; color: var(--text-2); }
+
+/* 영상 받는 자리 — 이미지 붙여넣는 창과 같은 모양으로 둔다 */
+.vdrop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 170px;
+  padding: 24px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: center;
+  cursor: pointer;
+}
+.vdrop.is-drag-over { border-color: var(--accent); background: var(--accent-track); }
+.vdrop__mark { font-size: 1.75rem; color: var(--muted); }
+.vdrop__say { font-weight: 600; }
+.vdrop__sub { font-size: 0.8125rem; color: var(--text-2); }
+
+/* 크게 보기 — 그림과 영상이 주인공이라 창을 넓게 쓴다.
+
+   높이는 창 안쪽(.modal__body) 보다 낮게 잡아야 한다. 더 크면 창 안에서
+   스크롤이 생겨 영상의 재생 단추가 아래로 잘린다. */
+#modal:has(.lightbox--big) { width: min(1000px, calc(100vw - 32px)); }
+#modal:has(.lightbox--big) .modal__body { max-height: 72vh; }
+.lightbox--big { background: var(--surface-2); border-radius: var(--radius-sm); }
+.lightbox--big .lightbox__img,
+.lightbox--big .lightbox__video { max-height: 62vh; }
+.lightbox__video {
+  max-width: 100%;
+  display: block;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+.lightbox--big .refblank { width: 100%; min-height: 220px; }
+
+.refdetail__host { margin-top: 12px; font-size: 0.75rem; color: var(--muted); }
+.refdetail__title { margin-top: 4px; font-weight: 650; }
+.refdetail__note { margin-top: 6px; font-size: 0.875rem; color: var(--text-2); white-space: pre-wrap; }
+.refdetail__swap { margin-top: 10px; }
+
+/* 글처럼 보이는 단추 */
+.linkish {
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* 단추는 display 를 직접 정해 두므로 hidden 만으로는 안 숨는다 */
+.btn[hidden] { display: none; }
+
+/* ============================================================
    좁은 화면 — 휴대폰에서 보기
    글자를 줄이고, 옆으로 미는 것을 없앤다. 옆으로 밀어야 보이는 것은
    대개 못 보고 지나간다.
@@ -2059,12 +2229,22 @@ body.is-locked #settings-btn { display: none; }
   /* rem 으로 짜 둔 것이 한꺼번에 줄어든다 */
   html { font-size: 14.5px; }
 
-  /* 탭 — 긴 이름 대신 짧은 이름. 세 개가 한 화면에 들어와야 어떤 탭이
-     있는지 알 수 있다. */
+  /* 탭 — 긴 이름 대신 짧은 이름. 네 개가 한 화면에 들어와야 어떤 탭이
+     있는지 알 수 있다. 한 줄에 다 안 들어가므로 두 줄로 접는다.
+     옆으로 밀어야 보이는 것은 대개 못 보고 지나간다. */
   .tab__long { display: none; }
   .tab__short { display: inline; }
-  .tabs { overflow-x: visible; gap: 2px; }
-  .tab { padding: 10px 10px; font-size: 0.875rem; white-space: nowrap; }
+  .tabs { overflow-x: visible; gap: 2px; flex-wrap: wrap; padding-bottom: 2px; }
+  .tab { padding: 9px 9px; font-size: 0.875rem; white-space: nowrap; }
+
+  /* 레퍼런스 판 — 좁아도 두 줄로 놓는다. 한 줄이면 훑어보는 맛이 없다. */
+  .refgrid { column-width: auto; columns: 2; column-gap: 10px; }
+  .refcard { margin-bottom: 10px; }
+  .refcard__cap { padding: 6px 8px 8px; font-size: 0.75rem; }
+  /* 끌어다 놓기는 마우스에서만 된다. 손가락으로는 눌러도 아무 일이 없으니
+     아예 띄우지 않는다 — 안 되는 단추가 보이는 것이 더 나쁘다. */
+  .refcard .card__grip { display: none; }
+  .refpick { padding: 12px 13px; gap: 11px; }
 
   /* 머리띠 */
   .topbar__inner { padding: 10px 14px; gap: 8px; }

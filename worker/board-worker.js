@@ -21,7 +21,9 @@ const ALLOWED_ORIGINS = [
 
 const TOKEN_DAYS = 30;
 const MAX_STATE_BYTES = 8 * 1024 * 1024;
-const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+/* 사진뿐 아니라 타사 레퍼런스에 올린 영상도 이 창구로 오간다.
+   KV 한 칸의 한도가 25MB 라 그보다는 낮게 잡는다. */
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 /* ---------- 응답 만들기 ---------- */
 
